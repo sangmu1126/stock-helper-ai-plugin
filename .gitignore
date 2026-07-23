@@ -1,0 +1,10 @@
+.env
+*.zip
+.agents/
+.claude/
+.codex/
+plugins/
+__pycache__/
+*.pyc
+.pytest_cache/
+.aws-sam/

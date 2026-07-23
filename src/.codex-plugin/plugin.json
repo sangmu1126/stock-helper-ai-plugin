@@ -1,0 +1,26 @@
+{
+  "name": "safe-trade-rule-builder",
+  "version": "0.1.0",
+  "description": "Generate safer serverless trading-rule drafts from beginner investors' natural-language trade intent.",
+  "author": {
+    "name": "AX Hackathon Team"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Safe Trade Rule Builder",
+    "shortDescription": "Turn emotional trade intent into safer rule drafts.",
+    "longDescription": "Safe Trade Rule Builder helps beginner investors convert natural-language buy or sell intent into explainable, mechanical, serverless trading-rule drafts with pre-execution health checks, risk guardrails, and manual confirmation boundaries.",
+    "developerName": "AX Hackathon Team",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Convert this trade idea into a safe serverless rule draft.",
+      "Explain whether this buy or sell rule is emotionally risky.",
+      "Generate a Lambda-style guardrail for this trading rule."
+    ]
+  }
+}
