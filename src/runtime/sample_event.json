@@ -1,0 +1,31 @@
+{
+  "rule": {
+    "asset": "035720.KS",
+    "trigger": {
+      "type": "price_drop_percent",
+      "reference": "previous_close",
+      "percent": 3
+    },
+    "action": "prepare_buy_order",
+    "execution_mode": "manual_confirm"
+  },
+  "quote": {
+    "timestamp": 1783578603,
+    "age_seconds": 0,
+    "regular_market_price": 33650,
+    "previous_close": 34650
+  },
+  "broker_health": {
+    "ok": true
+  },
+  "exchange_status": {
+    "status": "OPEN"
+  },
+  "account_limits": {
+    "daily_loss_pct": 0,
+    "max_daily_loss_pct": 3,
+    "order_amount": 100000,
+    "max_order_amount": 500000,
+    "duplicate_order": false
+  }
+}
