@@ -1,0 +1,4 @@
+yfinance>=0.2.40
+pydantic>=2.8
+openai>=1.40
+pytest>=8.0

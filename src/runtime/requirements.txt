@@ -1,0 +1,2 @@
+# Runtime currently relies only on the Python standard library plus boto3 from
+# the AWS Lambda Python runtime when DynamoDB backends are enabled.
