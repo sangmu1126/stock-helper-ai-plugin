@@ -1,0 +1,103 @@
+{
+  "version": "prompt-security.safe-trade.v1",
+  "patterns": [
+    {
+      "id": "ignore_previous_instructions_ko",
+      "pattern": "이전\\s*지시\\s*무시",
+      "severity": "high",
+      "reason": "PROMPT_INJECTION_DETECTED",
+      "enabled": true
+    },
+    {
+      "id": "ignore_prior_instructions_ko",
+      "pattern": "앞(?:선|의)?\\s*지시\\s*무시",
+      "severity": "high",
+      "reason": "PROMPT_INJECTION_DETECTED",
+      "enabled": true
+    },
+    {
+      "id": "system_prompt_request_ko",
+      "pattern": "시스템\\s*프롬프트",
+      "severity": "high",
+      "reason": "PROMPT_INJECTION_DETECTED",
+      "enabled": true
+    },
+    {
+      "id": "developer_instruction_bypass_ko",
+      "pattern": "개발자\\s*지시\\s*무시",
+      "severity": "high",
+      "reason": "PROMPT_INJECTION_DETECTED",
+      "enabled": true
+    },
+    {
+      "id": "ignore_previous_instructions_en",
+      "pattern": "ignore\\s+(?:all\\s+)?previous",
+      "severity": "high",
+      "reason": "PROMPT_INJECTION_DETECTED",
+      "enabled": true
+    },
+    {
+      "id": "ignore_system_instructions_en",
+      "pattern": "ignore\\s+(?:the\\s+)?(?:system|developer)\\s+instructions?",
+      "severity": "high",
+      "reason": "PROMPT_INJECTION_DETECTED",
+      "enabled": true
+    },
+    {
+      "id": "disregard_previous_en",
+      "pattern": "disregard\\s+(?:all\\s+)?previous",
+      "severity": "high",
+      "reason": "PROMPT_INJECTION_DETECTED",
+      "enabled": true
+    },
+    {
+      "id": "reveal_system_prompt_en",
+      "pattern": "reveal\\s+(?:the\\s+)?(?:system\\s+)?prompt",
+      "severity": "high",
+      "reason": "PROMPT_INJECTION_DETECTED",
+      "enabled": true
+    },
+    {
+      "id": "auto_order_request_ko",
+      "pattern": "자동\\s*주문\\s*해",
+      "severity": "high",
+      "reason": "LIVE_ORDER_PROMPT_BLOCKED",
+      "enabled": true
+    },
+    {
+      "id": "automatic_order_request_ko",
+      "pattern": "자동으로\\s*주문",
+      "severity": "high",
+      "reason": "LIVE_ORDER_PROMPT_BLOCKED",
+      "enabled": true
+    },
+    {
+      "id": "immediate_order_request_ko",
+      "pattern": "바로\\s*주문",
+      "severity": "high",
+      "reason": "LIVE_ORDER_PROMPT_BLOCKED",
+      "enabled": true
+    },
+    {
+      "id": "live_order_request_ko",
+      "pattern": "실주문",
+      "severity": "high",
+      "reason": "LIVE_ORDER_PROMPT_BLOCKED",
+      "enabled": true
+    },
+    {
+      "id": "live_order_request_en",
+      "pattern": "live\\s*order",
+      "severity": "high",
+      "reason": "LIVE_ORDER_PROMPT_BLOCKED",
+      "enabled": true
+    },
+    {
+      "id": "place_order_request_en",
+      "pattern": "place\\s+(?:the\\s+)?order",
+      "severity": "high",
+      "reason": "LIVE_ORDER_PROMPT_BLOCKED",
+      "enabled": true
+    }
+  ]
+}

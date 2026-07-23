@@ -1,0 +1,25 @@
+{
+  "version": "policy.safe-trade.v1",
+  "investment_advice_patterns": [
+    "추천",
+    "뭐 사",
+    "무슨 종목",
+    "오를 종목",
+    "수익 낼",
+    "종목 골라",
+    "best stock",
+    "recommend"
+  ],
+  "severe_emotional_flags": [
+    "all_in"
+  ],
+  "actions": {
+    "investment_advice_request": "BLOCK",
+    "severe_emotional_risk": "BLOCK",
+    "emotional_risk": "REQUIRE_CLARIFICATION",
+    "missing_order_limit": "REQUIRE_CLARIFICATION",
+    "parser_ambiguity": "REQUIRE_CLARIFICATION",
+    "notify_only": "ALLOW",
+    "default": "ALLOW"
+  }
+}
