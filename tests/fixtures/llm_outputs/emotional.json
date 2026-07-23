@@ -1,0 +1,21 @@
+{
+  "intent": "손실 복구하려고 카카오 몰빵 매수",
+  "payload": {
+    "asset": {"symbol": "035720.KS", "name": "카카오", "confidence": 0.9},
+    "trigger": {"type": "needs_clarification", "reason": "No numeric trigger was found."},
+    "action": "prepare_buy_order",
+    "execution_mode": "manual_confirm",
+    "order": {"mode": "amount", "value": 100000, "currency": "KRW"},
+    "emotional_risk_flags": [
+      {"flag": "all_in", "evidence": "몰빵", "response": "룰을 활성화하기 전에 감정이 가라앉은 상태에서 다시 확인해 주세요."}
+    ],
+    "parser": {"source": "llm"}
+  },
+  "expected": {
+    "asset_symbol": "035720.KS",
+    "trigger_type": "needs_clarification",
+    "action": "clarify_action",
+    "execution_mode": "manual_confirm",
+    "policy_decision": "BLOCK"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "intent": "카카오가 3% 움직이면 매수 후보로 알려줘",
+  "payload": {
+    "asset": {"symbol": "035720.KS", "name": "카카오", "confidence": 0.8},
+    "trigger": {"type": "price_move_percent", "reference": "previous_close", "percent": 3, "direction": "needs_clarification"},
+    "action": "prepare_buy_order",
+    "execution_mode": "manual_confirm",
+    "order": {"mode": "required_before_activation", "currency": "KRW"},
+    "ambiguities": [
+      {"field": "trigger.direction", "question": "가격이 오를 때인지 내릴 때인지 알려 주세요."}
+    ],
+    "parser": {"source": "llm"}
+  },
+  "expected": {
+    "asset_symbol": "035720.KS",
+    "trigger_type": "price_move_percent",
+    "action": "prepare_buy_order",
+    "execution_mode": "manual_confirm",
+    "policy_decision": "REQUIRE_CLARIFICATION"
+  }
+}

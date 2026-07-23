@@ -1,0 +1,18 @@
+{
+  "intent": "카카오가 전일 종가보다 3% 떨어지면 10만원만 매수 후보로 알려줘",
+  "payload": {
+    "asset": {"symbol": "035720.KQ", "name": "카카오", "confidence": 0.9},
+    "trigger": {"type": "price_drop_percent", "reference": "previous_close", "percent": 3},
+    "action": "notify_only",
+    "execution_mode": "notify_only",
+    "order": {"mode": "amount", "value": 100000, "currency": "KRW"},
+    "parser": {"source": "llm"}
+  },
+  "expected": {
+    "asset_symbol": "035720.KS",
+    "trigger_type": "price_drop_percent",
+    "action": "prepare_buy_order",
+    "execution_mode": "manual_confirm",
+    "policy_decision": "ALLOW"
+  }
+}
