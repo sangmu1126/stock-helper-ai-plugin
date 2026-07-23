@@ -1,0 +1,9 @@
+{
+  "version": "risk.safe-trade.v1",
+  "max_daily_loss_pct": 3.0,
+  "max_order_amount": 500000,
+  "max_broker_latency_ms": 2000,
+  "max_quote_age_seconds": 15,
+  "allow_order_preparation": true,
+  "allow_live_order_submission": false
+}

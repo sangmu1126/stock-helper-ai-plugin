@@ -1,0 +1,4 @@
+interface:
+  display_name: "Safe Trade Rule Builder"
+  short_description: "Turn emotional trade intent into safer serverless rules"
+  default_prompt: "Use $safe-trade-rule-builder to convert this trade idea into a safer serverless rule."
