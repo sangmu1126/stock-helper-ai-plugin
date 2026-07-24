@@ -6,48 +6,31 @@ requirements before returning a decision object.
 """
 from __future__ import annotations
 
-import importlib.util
 import sys
 import time
 from pathlib import Path
 from typing import Any
 
-
+# Ensure runtime directory is on sys.path for Lambda packaging.
 _RUNTIME_DIR = Path(__file__).resolve().parent
 if str(_RUNTIME_DIR) not in sys.path:
     sys.path.insert(0, str(_RUNTIME_DIR))
 
-
-def _load_runtime_module(name: str) -> Any:
-    spec = importlib.util.spec_from_file_location(f"_safe_trade_runtime_{name}", _RUNTIME_DIR / f"{name}.py")
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Runtime module could not be loaded: {name}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-_EVALUATION = _load_runtime_module("evaluation")
-_POLICY = _load_runtime_module("policy_engine")
-_DECISION = _load_runtime_module("decision_engine")
-_DECISION_LOG = _load_runtime_module("decision_log")
-_CONFIRMATION = _load_runtime_module("confirmation")
-_RISK = _load_runtime_module("risk_controls")
-_OBSERVABILITY = _load_runtime_module("observability")
-_ERRORS = _load_runtime_module("error_taxonomy")
-_REDACTION = _load_runtime_module("redaction")
-_RESPONSE = _load_runtime_module("response_schema")
-_CONFIG = _load_runtime_module("config")
-_UX = _load_runtime_module("ux_classifier")
-_EVENT_CONTEXT = _load_runtime_module("event_context")
-_STORE_FACTORY = _load_runtime_module("store_factory")
-_PROMPT_SECURITY = _load_runtime_module("prompt_security")
-_CONFIG_PROVIDER = _load_runtime_module("config_provider")
-
-OPEN_MARKET_STATES = _EVALUATION.OPEN_MARKET_STATES
-evaluate_trigger = _EVALUATION.evaluate_trigger
-quote_age_status = _EVALUATION.quote_age_status
+import config as _CONFIG  # noqa: E402
+import confirmation as _CONFIRMATION  # noqa: E402
+import decision_engine as _DECISION  # noqa: E402
+import decision_log as _DECISION_LOG  # noqa: E402
+import error_taxonomy as _ERRORS  # noqa: E402
+import event_context as _EVENT_CONTEXT  # noqa: E402
+import observability as _OBSERVABILITY  # noqa: E402
+import policy_engine as _POLICY  # noqa: E402
+import prompt_security as _PROMPT_SECURITY  # noqa: E402
+import redaction as _REDACTION  # noqa: E402
+import response_schema as _RESPONSE  # noqa: E402
+import risk_controls as _RISK  # noqa: E402
+import store_factory as _STORE_FACTORY  # noqa: E402
+import ux_classifier as _UX  # noqa: E402
+from evaluation import OPEN_MARKET_STATES, evaluate_trigger, quote_age_status  # noqa: E402
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:

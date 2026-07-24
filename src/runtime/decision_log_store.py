@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 
@@ -43,6 +45,36 @@ def _load_boto3_table(table_name: str) -> object:
     except ImportError as exc:
         raise RuntimeError("boto3 is required for DynamoDBDecisionLogStore.") from exc
     return boto3.resource("dynamodb").Table(table_name)
+
+
+class FileDecisionLogStore:
+    """Append-only local store for tests and single-node prototypes."""
+
+    def __init__(self, path: str | Path) -> None:
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+
+    def append(self, decision_log: dict[str, Any]) -> None:
+        with self.path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(decision_log, ensure_ascii=False, default=str) + "\n")
+
+    def read_all(self) -> list[dict[str, Any]]:
+        if not self.path.exists():
+            return []
+        entries: list[dict[str, Any]] = []
+        for line in self.path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line:
+                entries.append(json.loads(line))
+        return entries
+
+    def snapshot(self) -> dict[str, Any]:
+        entries = self.read_all()
+        return {
+            "store": "FileDecisionLogStore",
+            "path": str(self.path),
+            "entry_count": len(entries),
+        }
 
 
 def _to_dynamodb_safe(value: Any) -> Any:

@@ -930,8 +930,20 @@ def _load_runtime_module(name: str):
     if name != "lambda_handler":
         path = ROOT / "src" / "runtime" / f"{name}.py"
     runtime_root = str(ROOT / "src" / "runtime")
-    if runtime_root not in sys.path:
-        sys.path.insert(0, runtime_root)
+    # Ensure runtime is at the front of sys.path so it takes priority over scripts/.
+    if runtime_root in sys.path:
+        sys.path.remove(runtime_root)
+    sys.path.insert(0, runtime_root)
+    # Clear cached modules that may have been loaded from scripts/ path.
+    _runtime_modules = [
+        "evaluation", "policy_engine", "decision_engine", "decision_log",
+        "confirmation", "risk_controls", "observability", "error_taxonomy",
+        "redaction", "response_schema", "config", "ux_classifier",
+        "event_context", "store_factory", "prompt_security", "config_provider",
+        "state_store", "decision_log_store", "providers",
+    ]
+    for mod_name in _runtime_modules:
+        sys.modules.pop(mod_name, None)
     spec = importlib.util.spec_from_file_location("lambda_handler", path)
     if name != "lambda_handler":
         spec = importlib.util.spec_from_file_location(f"runtime_{name}", path)

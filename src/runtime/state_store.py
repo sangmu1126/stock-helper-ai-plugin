@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import dataclass, field
 from decimal import Decimal
+from pathlib import Path
 from typing import Any, Protocol
 
 
@@ -58,6 +60,74 @@ class InMemoryStateStore:
             "idempotency_key_count": len(self.idempotency_keys),
             "last_rule_fire_at": dict(self.last_rule_fire_at),
         }
+
+
+class FileStateStore:
+    """Local durable store for tests and single-node prototypes.
+
+    AWS Lambda should use DynamoDB or another external store instead of relying
+    on the ephemeral function filesystem.
+    """
+
+    def __init__(self, path: str | Path) -> None:
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+
+    def has_idempotency_key(self, key: str) -> bool:
+        return key in self._read()["idempotency_keys"]
+
+    def record_idempotency_key(self, key: str) -> None:
+        state = self._read()
+        keys = set(state["idempotency_keys"])
+        keys.add(key)
+        state["idempotency_keys"] = sorted(keys)
+        self._write(state)
+
+    def cooldown_active(self, rule_id: str, *, now: int, cooldown_seconds: int) -> bool:
+        last_fire_at = self._read()["last_rule_fire_at"].get(rule_id)
+        if last_fire_at is None:
+            return False
+        return now - int(last_fire_at) < cooldown_seconds
+
+    def record_rule_fire(self, rule_id: str, *, now: int) -> None:
+        state = self._read()
+        state["last_rule_fire_at"][rule_id] = now
+        self._write(state)
+
+    def record_decision_state(
+        self, idempotency_key: str, rule_id: str | None = None, *, now: int = 0,
+    ) -> None:
+        """Atomically record idempotency key and optional rule fire."""
+        if self.has_idempotency_key(idempotency_key):
+            raise DuplicateStateRecordError(idempotency_key)
+        self.record_idempotency_key(idempotency_key)
+        if rule_id:
+            self.record_rule_fire(rule_id, now=now)
+
+    def snapshot(self) -> dict[str, object]:
+        state = self._read()
+        return {
+            "store": "FileStateStore",
+            "path": str(self.path),
+            "idempotency_key_count": len(state["idempotency_keys"]),
+            "last_rule_fire_at": dict(state["last_rule_fire_at"]),
+        }
+
+    def _read(self) -> dict[str, object]:
+        if not self.path.exists():
+            return {"idempotency_keys": [], "last_rule_fire_at": {}}
+        with self.path.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+        return {
+            "idempotency_keys": list(data.get("idempotency_keys", [])),
+            "last_rule_fire_at": dict(data.get("last_rule_fire_at", {})),
+        }
+
+    def _write(self, state: dict[str, object]) -> None:
+        temp_path = self.path.with_suffix(self.path.suffix + ".tmp")
+        with temp_path.open("w", encoding="utf-8") as handle:
+            json.dump(state, handle, ensure_ascii=False, sort_keys=True)
+        temp_path.replace(self.path)
 
 
 class DynamoDBStateStore:
