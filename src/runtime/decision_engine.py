@@ -21,6 +21,8 @@ class DecisionResult:
     confirmation_required: bool
     state_checked: bool
     state_snapshot: dict[str, Any]
+    is_new_decision: bool = False
+    fire_rule_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -42,7 +44,7 @@ class DecisionEngine:
         trigger_evaluation: dict[str, Any] | None,
         now: int | None = None,
         user_id: str | None = None,
-    ) -> DecisionResult:
+    ) -> dict[str, Any]:
         checked_at = now if now is not None else now_seconds()
         rule_id = stable_id(asset.get("symbol"), trigger, action)
         idempotency_key = make_idempotency_key(rule_id, trigger_evaluation)
@@ -75,11 +77,6 @@ class DecisionEngine:
         is_notify = action == "notify_only" or execution_mode == "notify_only"
         fire_rule_id = rule_id if (is_order or is_notify) else None
 
-        try:
-            self.state_store.record_decision_state(idempotency_key, fire_rule_id, now=checked_at, user_id=user_id)
-        except DuplicateStateRecordError:
-            return self._result("WAIT", ("DUPLICATE_DECISION_BLOCKED",), rule_id, idempotency_key, False, self._snapshot())
-
         if is_order:
             return self._result(
                 "MANUAL_CONFIRM",
@@ -88,9 +85,11 @@ class DecisionEngine:
                 idempotency_key,
                 True,
                 self._snapshot(),
+                is_new_decision=True,
+                fire_rule_id=fire_rule_id,
             )
         if is_notify:
-            return self._result("NOTIFY_ONLY", ("TRIGGER_MATCHED_NOTIFY_ONLY",), rule_id, idempotency_key, True, self._snapshot())
+            return self._result("NOTIFY_ONLY", ("TRIGGER_MATCHED_NOTIFY_ONLY",), rule_id, idempotency_key, True, self._snapshot(), is_new_decision=True, fire_rule_id=fire_rule_id)
         return self._result("REQUIRE_CLARIFICATION", ("UNSUPPORTED_ACTION_FOR_DECISION",), rule_id, idempotency_key, False, state_snapshot)
 
     def _snapshot(self) -> dict[str, Any]:
@@ -106,8 +105,12 @@ class DecisionEngine:
         idempotency_key: str,
         confirmation_required: bool,
         state_snapshot: dict[str, Any],
-    ) -> DecisionResult:
-        return DecisionResult(decision, reasons, rule_id, idempotency_key, confirmation_required, True, state_snapshot)
+        is_new_decision: bool = False,
+        fire_rule_id: str | None = None,
+    ) -> dict[str, Any]:
+        return DecisionResult(
+            decision, reasons, rule_id, idempotency_key, confirmation_required, True, state_snapshot, is_new_decision, fire_rule_id
+        ).to_dict()
 
 
 def cooldown_to_seconds(cooldown: dict[str, Any]) -> int:

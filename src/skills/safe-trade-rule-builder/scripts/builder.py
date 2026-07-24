@@ -125,7 +125,7 @@ def build_rule(
         cooldown=cooldown,
         policy_result=policy_result,
         trigger_evaluation=trigger_evaluation,
-    ).to_dict()
+    )
     confirmation_checklist = build_confirmation_checklist(
         decision_result["decision"],
         action=action,

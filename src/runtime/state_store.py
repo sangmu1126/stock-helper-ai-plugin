@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -17,7 +18,7 @@ class StateStore(Protocol):
     def record_rule_fire(self, rule_id: str, *, now: int, user_id: str | None = None) -> None: ...
 
     def record_decision_state(
-        self, idempotency_key: str, rule_id: str | None = None, *, now: int = 0, user_id: str | None = None,
+        self, idempotency_key: str, rule_id: str | None = None, *, now: int = 0, user_id: str | None = None, decision_log: dict[str, Any] | None = None
     ) -> None: ...
 
     def query_by_user(self, user_id: str, limit: int = 50) -> list[dict[str, Any]]: ...
@@ -46,7 +47,7 @@ class InMemoryStateStore:
         self.last_rule_fire_at[rule_id] = now
 
     def record_decision_state(
-        self, idempotency_key: str, rule_id: str | None = None, *, now: int = 0, user_id: str | None = None,
+        self, idempotency_key: str, rule_id: str | None = None, *, now: int = 0, user_id: str | None = None, decision_log: dict[str, Any] | None = None
     ) -> None:
         """Atomically record idempotency key and optional rule fire."""
         if self.has_idempotency_key(idempotency_key):
@@ -100,7 +101,7 @@ class FileStateStore:
         self._write(state)
 
     def record_decision_state(
-        self, idempotency_key: str, rule_id: str | None = None, *, now: int = 0, user_id: str | None = None,
+        self, idempotency_key: str, rule_id: str | None = None, *, now: int = 0, user_id: str | None = None, decision_log: dict[str, Any] | None = None
     ) -> None:
         """Atomically record idempotency key and optional rule fire."""
         if self.has_idempotency_key(idempotency_key):
@@ -148,8 +149,9 @@ class DynamoDBStateStore:
     - records include ttl_epoch_seconds so stale keys expire automatically
     """
 
-    def __init__(self, table_name: str, *, table: object | None = None, ttl_seconds: int = 86400) -> None:
+    def __init__(self, table_name: str, *, table: object | None = None, ttl_seconds: int = 86400, log_table_name: str | None = None) -> None:
         self.table_name = table_name
+        self.log_table_name = log_table_name or os.environ.get("SAFE_TRADE_DECISION_LOG_TABLE")
         self.ttl_seconds = ttl_seconds
         self.table = table or _load_boto3_table(table_name)
 
@@ -207,7 +209,7 @@ class DynamoDBStateStore:
         self.table.put_item(Item=item)
 
     def record_decision_state(
-        self, idempotency_key: str, rule_id: str | None = None, *, now: int = 0, user_id: str | None = None,
+        self, idempotency_key: str, rule_id: str | None = None, *, now: int = 0, user_id: str | None = None, decision_log: dict[str, Any] | None = None
     ) -> None:
         """Atomically write idempotency key and cooldown via TransactWriteItems.
 
@@ -247,8 +249,6 @@ class DynamoDBStateStore:
                 "created_at": {"N": str(now)},
                 "ttl_epoch_seconds": {"N": str(now + 90 * 86400)},
             }
-            if user_id:
-                rule_item["user_id"] = {"S": user_id}
             
             transact_items.append({
                 "Put": {
@@ -256,6 +256,23 @@ class DynamoDBStateStore:
                     "Item": rule_item,
                 }
             })
+            
+        if decision_log and self.log_table_name:
+            import json
+            log_item: dict[str, Any] = {
+                "decision_id": {"S": decision_log["id"]},
+                "user_id": {"S": decision_log["user_id"]},
+                "created_at": {"N": str(decision_log["created_at"])},
+                "log_document": {"S": json.dumps(decision_log, ensure_ascii=False)},
+                "ttl_epoch_seconds": {"N": str(decision_log.get("ttl_epoch_seconds", now + 90 * 86400))}
+            }
+            transact_items.append({
+                "Put": {
+                    "TableName": self.log_table_name,
+                    "Item": log_item,
+                }
+            })
+            
         try:
             client.transact_write_items(TransactItems=transact_items)
         except Exception as exc:
