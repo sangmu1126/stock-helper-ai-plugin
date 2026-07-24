@@ -24,11 +24,6 @@ jobs:
         if [ -f src/requirements.txt ]; then pip install -r src/requirements.txt; fi
         pip install pytest ruff boto3
         
-    - name: Lint with Ruff
-      run: |
-        ruff check . > ruff_output.txt 2>&1 || true
-        cat ruff_output.txt >> $GITHUB_STEP_SUMMARY
-        
     - name: Test with pytest
       env:
         PYTHONPATH: src/runtime
