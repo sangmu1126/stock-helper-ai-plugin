@@ -222,9 +222,14 @@ python tools\package_submission.py
 1. **DynamoDB 트랜잭션 고립 (Race Condition) 해결**: 
    - 기존에는 `idempotency_key` 저장과 `cooldown` 갱신이 독립된 두 번의 쿼리로 분리되어 있어, 그 사이에 Lambda 크래시가 발생할 경우 고아(Orphan) 락이 발생하는 치명적 결함이 존재했습니다. 
    - 이를 `TransactWriteItems`를 활용한 원자적 단일 트랜잭션 연산(`record_decision_state`)으로 통합하여 데이터 무결성을 100% 보장하도록 개선했습니다.
-2. **AppConfig 호출 비용 및 지연 최적화**: 
+   - **(Phase 7 추가 고도화)**: 기존에는 상태 저장(Idempotency, Cooldown)과 결정 이력(Decision Log) 저장이 분리되어 있었습니다. Phase 7에서는 이 3가지 쓰기 작업을 **단일 `TransactWriteItems` 명령**으로 완벽하게 병합하여, 람다가 죽더라도 로그 누락이나 고아 락이 발생하지 않는 진정한 원자성(Atomicity)을 달성했습니다.
+2. **보안 인가 계층 고도화 (Phase 7)**:
+   - 단순한 `x-api-key` 검증을 넘어, `Authorization: Bearer <token>` 형태의 JWT(JSON Web Token) 파싱 미들웨어를 추가했습니다. 클라이언트가 넘긴 페이로드를 신뢰하지 않고, JWT 내부의 `sub` 클레임을 기반으로 `user_id`를 강제 주입하여 인가(Authorization)의 빈틈을 완벽하게 틀어막았습니다.
+3. **비동기 이벤트 분리를 통한 동기 병목 해소 (Phase 7)**:
+   - 평가 결정 후 체결 로그 적재나 사용자 알림과 같은 무거운 후처리 작업이 API Gateway의 동기 응답 속도를 깎아먹지 않도록, AWS EventBridge로 `DecisionMade` 이벤트를 비동기 발송(`emit_async_decision_event`)하는 클라우드 네이티브 패턴을 적용했습니다.
+4. **AppConfig 호출 비용 및 지연 최적화**: 
    - 매 Lambda 호출마다 새로운 AppConfig 세션을 여는 구조에서 발생하는 Latency와 비용 낭비를 막기 위해, `InitialConfigurationToken` 이후의 `NextPollConfigurationToken`을 전역(Global) 메모리에 캐싱하여 재사용하도록 아키텍처를 변경했습니다.
-3. **DynamoDB 스토리지 누수 방어**: 
+5. **DynamoDB 스토리지 누수 방어**: 
    - 애플리케이션 코드에는 TTL 속성이 정의되어 있었으나 IaC (`template.yaml`) 수준에서 빠져있던 `TimeToLiveSpecification`을 명시적으로 활성화하여 무한히 쌓이는 스토리지 비용을 방어했습니다.
-4. **시스템 장애 Fail-Closed 보장**: 
+6. **시스템 장애 Fail-Closed 보장**: 
    - 외부 DB나 Config 서비스 장애 시 Lambda가 502 에러를 뱉고 크래시하는 것을 막기 위해 최상위 핸들러에 예외 처리 경계(Boundary)를 구축하고, 장애 시에도 클라이언트에게 구조화된 `STOP` JSON 응답을 보장하도록 개선했습니다.
