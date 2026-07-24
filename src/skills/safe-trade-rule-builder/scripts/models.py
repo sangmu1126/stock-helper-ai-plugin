@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-
 MAX_QUOTE_AGE_SECONDS = 15
 OPEN_MARKET_STATES = {"OPEN", "REGULAR"}
 

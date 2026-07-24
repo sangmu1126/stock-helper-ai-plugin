@@ -23,8 +23,7 @@ def enforce_safety(rule: ParsedRule) -> ParsedRule:
         data["action"] = "clarify_action"
         warnings.append("UNSUPPORTED_ACTION_NORMALIZED_TO_CLARIFY")
 
-    if not has_emotional_risk and data["action"] in {"prepare_buy_order", "prepare_sell_order"}:
-        if data["order"].get("mode") == "required_before_activation":
+    if not has_emotional_risk and data["action"] in {"prepare_buy_order", "prepare_sell_order"} and data["order"].get("mode") == "required_before_activation":
             ambiguities.append(
                 Ambiguity(
                     field="order",

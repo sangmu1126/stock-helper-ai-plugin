@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import Any
 
 from config_provider import ConfigSnapshot, load_config
-
 
 DEFAULT_RISK_LIMITS: dict[str, Any] = {
     "version": "risk.safe-trade.v2",

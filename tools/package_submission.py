@@ -6,7 +6,6 @@ import sys
 import zipfile
 from pathlib import Path
 
-
 REQUIRED_PATHS = [
     Path("src/.codex-plugin/plugin.json"),
     Path("src/skills/safe-trade-rule-builder/SKILL.md"),

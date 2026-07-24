@@ -5,16 +5,14 @@ from pathlib import Path
 
 import pytest
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "src" / "skills" / "safe-trade-rule-builder" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-from deterministic_parser import parse_deterministic  # noqa: E402
-from normalizer import normalize_payload  # noqa: E402
-from policy_engine import evaluate_policy  # noqa: E402
-from schema import ParsedRule  # noqa: E402
-
+from deterministic_parser import parse_deterministic
+from normalizer import normalize_payload
+from policy_engine import evaluate_policy
+from schema import ParsedRule
 
 GOLDEN_CASES = [
     {

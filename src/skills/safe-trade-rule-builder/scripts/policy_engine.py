@@ -5,7 +5,6 @@ from pathlib import Path
 
 from runtime_bridge import load_runtime_module
 
-
 _POLICY = load_runtime_module("policy_engine")
 
 POLICY_VERSION = _POLICY.POLICY_VERSION

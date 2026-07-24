@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 HARD_STOP_REASONS = {
     "BROKER_HEALTHCHECK_FAILED",
     "MISSING_QUOTE_TIMESTAMP",

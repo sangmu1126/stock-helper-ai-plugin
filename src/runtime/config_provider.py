@@ -7,9 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 _RUNTIME_DIR = Path(__file__).resolve().parent
-_CACHE: dict[str, tuple[float, "ConfigSnapshot"]] = {}
+_CACHE: dict[str, tuple[float, ConfigSnapshot]] = {}
 
 
 @dataclass(frozen=True)
@@ -123,7 +122,7 @@ def _load_json_file(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as handle:
         loaded = json.load(handle)
     if not isinstance(loaded, dict):
-        raise ValueError(f"Config must be a JSON object: {path}")
+        raise TypeError(f"Config must be a JSON object: {path}")
     return loaded
 
 
@@ -135,7 +134,7 @@ def _load_from_ssm(parameter_name: str) -> dict[str, Any]:
     value = response["Parameter"]["Value"]
     loaded = json.loads(value)
     if not isinstance(loaded, dict):
-        raise ValueError(f"SSM config must be a JSON object: {parameter_name}")
+        raise TypeError(f"SSM config must be a JSON object: {parameter_name}")
     return loaded
 
 
@@ -165,7 +164,7 @@ def _load_from_appconfig(kind: str) -> dict[str, Any]:
     payload = response["Configuration"].read()
     loaded = json.loads(payload.decode("utf-8") or "{}")
     if not isinstance(loaded, dict):
-        raise ValueError(f"AppConfig payload must be a JSON object: {profile}")
+        raise TypeError(f"AppConfig payload must be a JSON object: {profile}")
     return loaded
 
 

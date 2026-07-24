@@ -4,7 +4,12 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 from decision_log import stable_id
-from state_store import DuplicateStateRecordError, InMemoryStateStore, StateStore, now_seconds
+from state_store import (
+    DuplicateStateRecordError,
+    InMemoryStateStore,
+    StateStore,
+    now_seconds,
+)
 
 
 @dataclass(frozen=True)
@@ -90,7 +95,7 @@ class DecisionEngine:
 
     def _snapshot(self) -> dict[str, Any]:
         if hasattr(self.state_store, "snapshot"):
-            return getattr(self.state_store, "snapshot")()
+            return self.state_store.snapshot()
         return {"store": self.state_store.__class__.__name__}
 
     def _result(

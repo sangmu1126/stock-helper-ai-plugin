@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from models import RuleDraft
 
-
 WARNING_MESSAGES = {
     "INSUFFICIENT_HISTORY_FOR_CONFIDENCE": "There are too few historical bars to trust this rule's behavior.",
     "NO_TRIGGER_EVENTS_FOUND": "This rule did not trigger in the tested period, so it may be too narrow or untested.",
@@ -303,7 +302,6 @@ def _backtest_lines(draft: RuleDraft) -> list[str]:
         f"- Trigger rate: `{results.get('trigger_rate')}`",
         f"- Min / max daily move: `{results.get('min_daily_move_percent')}` / `{results.get('max_daily_move_percent')}`",
     ]
-    health = draft.backtest.get("history_health") or draft.backtest.get("health") or {}
     if history.get("provider") == "demo-fixture":
         lines.append("- Data mode: `DEMO FIXTURE` - this is synthetic data for warning demonstration, not live market data.")
     warnings = draft.backtest.get("safety_review", {}).get("warnings", [])

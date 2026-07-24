@@ -4,7 +4,6 @@ from typing import Any
 
 from schema import ParsedRule
 
-
 ASSET_SYMBOL_ALIASES = {
     "카카오": "035720.KS",
     "kakao": "035720.KS",

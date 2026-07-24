@@ -10,34 +10,42 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "src" / "skills" / "safe-trade-rule-builder" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-from backtesting import backtest_rule  # noqa: E402
-from decision_log_store import DynamoDBDecisionLogStore, FileDecisionLogStore, InMemoryDecisionLogStore  # noqa: E402
-from decision_engine import DecisionEngine, make_idempotency_key  # noqa: E402
-from deterministic_parser import parse_deterministic  # noqa: E402
-from llm_client import parse_with_openai  # noqa: E402
-from llm_parser import parse_llm  # noqa: E402
-from parser_strategy import parse_intent  # noqa: E402
-from prompt_security import inspect_user_intent  # noqa: E402
-from market_data import get_provider  # noqa: E402
-from evaluation import evaluate_trigger  # noqa: E402
-from models import MarketQuote  # noqa: E402
-from normalizer import normalize_payload  # noqa: E402
-from policy_engine import PolicyEngine, load_policy_config  # noqa: E402
-from providers import EventAccountProvider, EventBrokerProvider  # noqa: E402
-from report_renderer import render_markdown_report  # noqa: E402
-from schema import ParsedRule  # noqa: E402
-from state_store import DuplicateStateRecordError, DynamoDBStateStore, FileStateStore, InMemoryStateStore  # noqa: E402
-from confirmation import build_confirmation_checklist  # noqa: E402
+from backtesting import backtest_rule
+from confirmation import build_confirmation_checklist
+from decision_engine import DecisionEngine, make_idempotency_key
+from decision_log_store import (
+    DynamoDBDecisionLogStore,
+    FileDecisionLogStore,
+    InMemoryDecisionLogStore,
+)
+from deterministic_parser import parse_deterministic
+from evaluation import evaluate_trigger
+from llm_client import parse_with_openai
+from llm_parser import parse_llm
+from market_data import get_provider
+from models import MarketQuote
+from normalizer import normalize_payload
+from parser_strategy import parse_intent
+from policy_engine import PolicyEngine, load_policy_config
+from prompt_security import inspect_user_intent
+from providers import EventAccountProvider, EventBrokerProvider
+from report_renderer import render_markdown_report
+from schema import ParsedRule
+from state_store import (
+    DuplicateStateRecordError,
+    DynamoDBStateStore,
+    FileStateStore,
+    InMemoryStateStore,
+)
 
 TOOLS = ROOT / "tools"
 sys.path.insert(0, str(TOOLS))
-from package_submission import validate as validate_submission  # noqa: E402
-from builder import build_rule  # noqa: E402
+from builder import build_rule
+from package_submission import validate as validate_submission
 
 
 def test_evaluate_trigger_uses_reference_field() -> None:
@@ -989,7 +997,7 @@ def _draft_from_rule(rule):
 
 
 class FakeConditionalCheckFailed(Exception):
-    response = {"Error": {"Code": "ConditionalCheckFailedException"}}
+    response = {"Error": {"Code": "ConditionalCheckFailedException"}}  # noqa: RUF012
 
 
 class FakeDynamoTable:

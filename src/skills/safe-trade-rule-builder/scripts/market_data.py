@@ -293,7 +293,7 @@ def get_provider(name: str) -> MarketDataProvider:
 def _history_indicators(ticker: Any, *, lookback_days: int = 20) -> tuple[float | None, float | None]:
     try:
         frame = ticker.history(period="1mo", interval="1d", auto_adjust=False)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None, None
     if frame is None or frame.empty:
         return None, None

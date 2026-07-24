@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 
-
 SYMBOLS = {
     "카카오페이": {"symbol": "377300.KS", "name": "Kakao Pay"},
     "카카오": {"symbol": "035720.KS", "name": "Kakao Corp"},

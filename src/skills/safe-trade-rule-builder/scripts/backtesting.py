@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 SUPPORTED_TRIGGERS = {
     "price_drop_percent",
     "price_rise_percent",

@@ -24,7 +24,7 @@ class RuntimeEvent:
     ambiguities: list[dict[str, Any]]
 
     @classmethod
-    def from_event(cls, event: dict[str, Any]) -> "RuntimeEvent":
+    def from_event(cls, event: dict[str, Any]) -> RuntimeEvent:
         rule = _as_dict(event.get("rule"))
         quote = _as_dict(event.get("quote"))
         trigger = _as_dict(rule.get("trigger"))

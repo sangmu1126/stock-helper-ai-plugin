@@ -8,7 +8,6 @@ from prompt_security import raise_if_unsafe
 from safety_validator import enforce_safety
 from schema import ParsedRule
 
-
 SYSTEM_INSTRUCTIONS = """You parse Korean or English beginner-investor trading intent into JSON.
 Return JSON only. Do not recommend buying or selling. Do not create live order execution.
 If a field is ambiguous, put a question in ambiguities instead of guessing.

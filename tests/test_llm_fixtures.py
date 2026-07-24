@@ -6,14 +6,13 @@ from pathlib import Path
 
 import pytest
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "src" / "skills" / "safe-trade-rule-builder" / "scripts"
 FIXTURES = ROOT / "tests" / "fixtures" / "llm_outputs"
 sys.path.insert(0, str(SCRIPTS))
 
-from llm_parser import normalize_llm_payload  # noqa: E402
-from policy_engine import evaluate_policy  # noqa: E402
+from llm_parser import normalize_llm_payload
+from policy_engine import evaluate_policy
 
 
 @pytest.mark.parametrize("fixture_path", sorted(FIXTURES.glob("*.json")), ids=lambda path: path.stem)

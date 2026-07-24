@@ -5,7 +5,6 @@ import os
 from pathlib import Path
 from typing import Any
 
-
 DEFAULT_MODEL = os.getenv("SAFE_TRADE_RULE_LLM_MODEL", "gpt-4.1-mini")
 DEFAULT_TIMEOUT_SECONDS = float(os.getenv("SAFE_TRADE_RULE_LLM_TIMEOUT_SECONDS", "20"))
 

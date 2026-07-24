@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 
-
 CONFIRMATION_SCHEMA_VERSION = "confirmation-checklist.v1"
 
 

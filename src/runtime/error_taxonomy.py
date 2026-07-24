@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 ERRORS: dict[str, dict[str, str]] = {
     "BROKER_HEALTHCHECK_FAILED": {"severity": "high", "category": "broker", "user_message": "브로커 상태 점검에 실패했습니다."},
     "BROKER_LATENCY_LIMIT_EXCEEDED": {"severity": "medium", "category": "broker", "user_message": "브로커 응답이 기준보다 느려 잠시 대기합니다."},

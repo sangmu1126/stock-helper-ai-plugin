@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import time
 from dataclasses import dataclass, field
-from decimal import Decimal
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -177,7 +176,7 @@ class DynamoDBStateStore:
                 Item=item,
                 ConditionExpression="attribute_not_exists(pk)",
             )
-        except Exception as exc:  # noqa: BLE001 - boto3 exposes provider-specific subclasses
+        except Exception as exc:
             if _is_conditional_check_failed(exc):
                 raise DuplicateStateRecordError(key) from exc
             raise
@@ -259,7 +258,7 @@ class DynamoDBStateStore:
             })
         try:
             client.transact_write_items(TransactItems=transact_items)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             exc_name = type(exc).__name__
             if _is_conditional_check_failed(exc) or "TransactionCanceledException" in exc_name:
                 raise DuplicateStateRecordError(idempotency_key) from exc

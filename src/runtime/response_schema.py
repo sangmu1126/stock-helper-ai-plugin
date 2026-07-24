@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 RESPONSE_SCHEMA_VERSION = "safe-trade-runtime-response.v1"
 
 
