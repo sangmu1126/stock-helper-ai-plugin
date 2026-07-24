@@ -61,3 +61,23 @@ def emit_emf_metrics(trace: dict[str, Any], metrics_data: dict[str, Any]) -> Non
         "UserId": trace.get("user_id", "anonymous"),
     }
     print(json.dumps(emf, ensure_ascii=False))
+
+
+def emit_async_decision_event(decision_log: dict[str, Any]) -> None:
+    """Mock asynchronous event emission to EventBridge."""
+    try:
+        import boto3  # type: ignore[import-not-found]
+        client = boto3.client("events")
+        client.put_events(
+            Entries=[
+                {
+                    "Source": "com.kakaopay.safetrade",
+                    "DetailType": "DecisionMade",
+                    "Detail": json.dumps(decision_log, ensure_ascii=False),
+                    "EventBusName": "default",
+                }
+            ]
+        )
+    except Exception as exc:  # noqa: BLE001
+        # Log failure but DO NOT block the synchronous response to the user.
+        print(f"Failed to emit async event: {exc}")

@@ -43,6 +43,8 @@ Resources:
             TableName: !Ref SafeTradeStateTable
         - DynamoDBCrudPolicy:
             TableName: !Ref SafeTradeDecisionLogTable
+        - EventBridgePutEventsPolicy:
+            EventBusName: default
       Events:
         EvaluateRule:
           Type: Api
