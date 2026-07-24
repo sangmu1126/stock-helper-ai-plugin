@@ -43,11 +43,12 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     is_api_gateway = "httpMethod" in event or "routeKey" in event or ("requestContext" in event and "http" in event.get("requestContext", {}))
     try:
         if is_api_gateway:
-            auth_rejection = _AUTH.validate_api_key(event)
+            auth_rejection, user_id = _AUTH.validate_api_gateway_auth(event)
             if auth_rejection:
                 return auth_rejection
             body = event.get("body", "{}")
             payload = json.loads(body) if isinstance(body, str) else body
+            payload["user_id"] = user_id
         else:
             payload = event
 
@@ -126,7 +127,7 @@ def _handle_event(event: dict[str, Any], context: Any) -> dict[str, Any]:
         trigger_result = evaluate_trigger(runtime_event.trigger, runtime_event.quote)
     trigger_result = _with_quote_snapshot(trigger_result, runtime_event.quote)
 
-    decision_result = _DECISION.DecisionEngine(state_store=state_store).decide(
+    decision_result_dict = _DECISION.DecisionEngine(state_store=state_store).decide(
         asset=runtime_event.asset,
         trigger=runtime_event.trigger,
         action=str(runtime_event.action),
@@ -136,12 +137,13 @@ def _handle_event(event: dict[str, Any], context: Any) -> dict[str, Any]:
         trigger_evaluation=trigger_result,
         now=now,
         user_id=str(event.get("user_id", "anonymous")),
-    ).to_dict()
+    )
+    
     decision_log = _DECISION_LOG.create_decision_log(
-        rule_id=decision_result["rule_id"],
+        rule_id=decision_result_dict["rule_id"],
         parser=event.get("parser", {"source": "runtime"}),
         policy_result=policy_result,
-        decision_result=decision_result,
+        decision_result=decision_result_dict,
         market_data=_REDACTION.redact(runtime_event.quote),
         trigger_evaluation=trigger_result,
         guardrails={
@@ -163,7 +165,22 @@ def _handle_event(event: dict[str, Any], context: Any) -> dict[str, Any]:
         },
         user_id=str(event.get("user_id", "anonymous")),
     ).to_dict()
-    log_store.append(decision_log)
+
+    if decision_result_dict.get("is_new_decision"):
+        try:
+            state_store.record_decision_state(
+                decision_result_dict["idempotency_key"],
+                decision_result_dict.get("fire_rule_id"),
+                now=now,
+                user_id=str(event.get("user_id", "anonymous")),
+                decision_log=decision_log
+            )
+        except _STORE_FACTORY.DuplicateStateRecordError:
+            decision_result_dict["decision"] = "WAIT"
+            decision_result_dict["reasons"] = ["DUPLICATE_DECISION_BLOCKED"]
+            decision_result_dict["is_new_decision"] = False
+
+    decision_result = decision_result_dict
 
     reasons = _response_reasons(decision_result, precheck_stops)
     ux = _UX.classify(decision_result["decision"], reasons)
@@ -176,7 +193,6 @@ def _handle_event(event: dict[str, Any], context: Any) -> dict[str, Any]:
         "policy_result": policy_result,
         "decision_result": decision_result,
         "decision_log": decision_log,
-        "decision_log_store": log_store.snapshot(),
         "confirmation_checklist": _CONFIRMATION.build_confirmation_checklist(
             decision_result["decision"],
             action=str(runtime_event.action),
@@ -203,6 +219,7 @@ def _handle_event(event: dict[str, Any], context: Any) -> dict[str, Any]:
         response["schema_validation_errors"] = missing_fields
 
     _OBSERVABILITY.emit_emf_metrics(response["trace"], response["metrics"])
+    _OBSERVABILITY.emit_async_decision_event(decision_log)
     
     return response
 

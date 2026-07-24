@@ -775,8 +775,8 @@ def test_dynamodb_state_store_cooldown_uses_consistent_read() -> None:
 
 def test_decision_engine_blocks_duplicate_conditional_write() -> None:
     class DuplicateOnRecordStore(InMemoryStateStore):
-        def record_idempotency_key(self, key: str, user_id: str | None = None) -> None:
-            raise DuplicateStateRecordError(key)
+        def has_idempotency_key(self, key: str) -> bool:
+            return True
 
     result = DecisionEngine(state_store=DuplicateOnRecordStore()).decide(
         asset={"symbol": "035720.KS"},
@@ -788,8 +788,8 @@ def test_decision_engine_blocks_duplicate_conditional_write() -> None:
         trigger_evaluation={"status": "MATCHED", "reason": "matched", "details": {"quote_timestamp": 100}},
     )
 
-    assert result.decision == "WAIT"
-    assert result.reasons == ("DUPLICATE_DECISION_BLOCKED",)
+    assert result["decision"] == "WAIT"
+    assert result["reasons"] == ("DUPLICATE_DECISION_BLOCKED",)
 
 
 def test_decision_engine_does_not_touch_state_store_for_stop_result() -> None:
@@ -810,8 +810,8 @@ def test_decision_engine_does_not_touch_state_store_for_stop_result() -> None:
         trigger_evaluation={"status": "STOP", "reason": "BROKER_HEALTHCHECK_FAILED", "details": {}},
     )
 
-    assert result.decision == "STOP"
-    assert result.reasons == ("BROKER_HEALTHCHECK_FAILED",)
+    assert result["decision"] == "STOP"
+    assert result["reasons"] == ("BROKER_HEALTHCHECK_FAILED",)
 
 
 def test_decision_log_stores_append_entries(tmp_path: Path) -> None:
