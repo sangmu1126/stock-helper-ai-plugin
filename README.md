@@ -1,5 +1,6 @@
 # Safe Trade Rule Builder
 
+[![CI](https://github.com/sangmu1126/stock-helper-ai-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/sangmu1126/stock-helper-ai-plugin/actions/workflows/ci.yml)
 카카오페이증권 문제의식에 맞춘 Codex 플러그인 프로토타입입니다. 초보 투자자가 자연어로 말한 매수·매도 의도를 바로 주문으로 연결하지 않고, 감정 표현·데이터 신뢰도·계좌 한도·중복 실행·수동 확인 절차를 통과한 서버리스 룰 초안으로 변환합니다.
 
 ## 5줄 요약
