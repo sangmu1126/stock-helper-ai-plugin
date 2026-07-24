@@ -43,6 +43,7 @@ Resources:
             TableName: !Ref SafeTradeStateTable
         - DynamoDBCrudPolicy:
             TableName: !Ref SafeTradeDecisionLogTable
+
   SafeTradeStateTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -50,9 +51,22 @@ Resources:
       AttributeDefinitions:
         - AttributeName: pk
           AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: N
       KeySchema:
         - AttributeName: pk
           KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: user-index
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
       TimeToLiveSpecification:
         AttributeName: ttl_epoch_seconds
         Enabled: true
@@ -64,9 +78,22 @@ Resources:
       AttributeDefinitions:
         - AttributeName: decision_id
           AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: N
       KeySchema:
         - AttributeName: decision_id
           KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: user-decisions-index
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
       TimeToLiveSpecification:
         AttributeName: ttl_epoch_seconds
         Enabled: true

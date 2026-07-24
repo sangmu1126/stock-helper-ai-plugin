@@ -36,6 +36,7 @@ class DecisionEngine:
         policy_result: dict[str, Any],
         trigger_evaluation: dict[str, Any] | None,
         now: int | None = None,
+        user_id: str | None = None,
     ) -> DecisionResult:
         checked_at = now if now is not None else now_seconds()
         rule_id = stable_id(asset.get("symbol"), trigger, action)
@@ -70,7 +71,7 @@ class DecisionEngine:
         fire_rule_id = rule_id if (is_order or is_notify) else None
 
         try:
-            self.state_store.record_decision_state(idempotency_key, fire_rule_id, now=checked_at)
+            self.state_store.record_decision_state(idempotency_key, fire_rule_id, now=checked_at, user_id=user_id)
         except DuplicateStateRecordError:
             return self._result("WAIT", ("DUPLICATE_DECISION_BLOCKED",), rule_id, idempotency_key, False, self._snapshot())
 

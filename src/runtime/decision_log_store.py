@@ -19,6 +19,15 @@ class InMemoryDecisionLogStore:
             "entry_count": len(self.entries),
         }
 
+    def query_user_decisions(self, user_id: str, limit: int = 50, exclusive_start_key: dict[str, Any] | None = None) -> dict[str, Any]:
+        # Simple mock implementation for in-memory
+        results = [entry for entry in self.entries if entry.get("user_id") == user_id]
+        results.sort(key=lambda x: x.get("created_at", 0), reverse=True)
+        return {
+            "items": results[:limit],
+            "last_evaluated_key": None
+        }
+
 
 class DynamoDBDecisionLogStore:
     def __init__(self, table_name: str, *, table: object | None = None) -> None:
@@ -36,6 +45,23 @@ class DynamoDBDecisionLogStore:
             "store": "DynamoDBDecisionLogStore",
             "table_name": self.table_name,
             "implemented": True,
+        }
+
+    def query_user_decisions(self, user_id: str, limit: int = 50, exclusive_start_key: dict[str, Any] | None = None) -> dict[str, Any]:
+        from boto3.dynamodb.conditions import Key  # type: ignore[import-not-found]
+        kwargs = {
+            "IndexName": "user-decisions-index",
+            "KeyConditionExpression": Key("user_id").eq(user_id),
+            "ScanIndexForward": False,
+            "Limit": limit,
+        }
+        if exclusive_start_key:
+            kwargs["ExclusiveStartKey"] = exclusive_start_key
+
+        response = self.table.query(**kwargs)
+        return {
+            "items": list(response.get("Items", [])),
+            "last_evaluated_key": response.get("LastEvaluatedKey"),
         }
 
 
@@ -74,6 +100,14 @@ class FileDecisionLogStore:
             "store": "FileDecisionLogStore",
             "path": str(self.path),
             "entry_count": len(entries),
+        }
+
+    def query_user_decisions(self, user_id: str, limit: int = 50, exclusive_start_key: dict[str, Any] | None = None) -> dict[str, Any]:
+        results = [entry for entry in self.read_all() if entry.get("user_id") == user_id]
+        results.sort(key=lambda x: x.get("created_at", 0), reverse=True)
+        return {
+            "items": results[:limit],
+            "last_evaluated_key": None
         }
 
 

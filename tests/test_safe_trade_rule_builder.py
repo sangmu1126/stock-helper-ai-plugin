@@ -767,7 +767,7 @@ def test_dynamodb_state_store_cooldown_uses_consistent_read() -> None:
 
 def test_decision_engine_blocks_duplicate_conditional_write() -> None:
     class DuplicateOnRecordStore(InMemoryStateStore):
-        def record_idempotency_key(self, key: str) -> None:
+        def record_idempotency_key(self, key: str, user_id: str | None = None) -> None:
             raise DuplicateStateRecordError(key)
 
     result = DecisionEngine(state_store=DuplicateOnRecordStore()).decide(

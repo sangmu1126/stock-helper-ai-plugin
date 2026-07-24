@@ -11,15 +11,17 @@ from typing import Any, Protocol
 class StateStore(Protocol):
     def has_idempotency_key(self, key: str) -> bool: ...
 
-    def record_idempotency_key(self, key: str) -> None: ...
+    def record_idempotency_key(self, key: str, user_id: str | None = None) -> None: ...
 
     def cooldown_active(self, rule_id: str, *, now: int, cooldown_seconds: int) -> bool: ...
 
-    def record_rule_fire(self, rule_id: str, *, now: int) -> None: ...
+    def record_rule_fire(self, rule_id: str, *, now: int, user_id: str | None = None) -> None: ...
 
     def record_decision_state(
-        self, idempotency_key: str, rule_id: str | None = None, *, now: int = 0,
+        self, idempotency_key: str, rule_id: str | None = None, *, now: int = 0, user_id: str | None = None,
     ) -> None: ...
+
+    def query_by_user(self, user_id: str, limit: int = 50) -> list[dict[str, Any]]: ...
 
 
 class DuplicateStateRecordError(RuntimeError):
@@ -34,25 +36,29 @@ class InMemoryStateStore:
     def has_idempotency_key(self, key: str) -> bool:
         return key in self.idempotency_keys
 
-    def record_idempotency_key(self, key: str) -> None:
+    def record_idempotency_key(self, key: str, user_id: str | None = None) -> None:
         self.idempotency_keys.add(key)
 
     def cooldown_active(self, rule_id: str, *, now: int, cooldown_seconds: int) -> bool:
         last_fire_at = self.last_rule_fire_at.get(rule_id)
         return last_fire_at is not None and now - last_fire_at < cooldown_seconds
 
-    def record_rule_fire(self, rule_id: str, *, now: int) -> None:
+    def record_rule_fire(self, rule_id: str, *, now: int, user_id: str | None = None) -> None:
         self.last_rule_fire_at[rule_id] = now
 
     def record_decision_state(
-        self, idempotency_key: str, rule_id: str | None = None, *, now: int = 0,
+        self, idempotency_key: str, rule_id: str | None = None, *, now: int = 0, user_id: str | None = None,
     ) -> None:
         """Atomically record idempotency key and optional rule fire."""
         if self.has_idempotency_key(idempotency_key):
             raise DuplicateStateRecordError(idempotency_key)
-        self.record_idempotency_key(idempotency_key)
+        self.record_idempotency_key(idempotency_key, user_id=user_id)
         if rule_id:
-            self.record_rule_fire(rule_id, now=now)
+            self.record_rule_fire(rule_id, now=now, user_id=user_id)
+
+    def query_by_user(self, user_id: str, limit: int = 50) -> list[dict[str, Any]]:
+        # In-memory mock just returns empty for now
+        return []
 
     def snapshot(self) -> dict[str, object]:
         return {
@@ -76,7 +82,7 @@ class FileStateStore:
     def has_idempotency_key(self, key: str) -> bool:
         return key in self._read()["idempotency_keys"]
 
-    def record_idempotency_key(self, key: str) -> None:
+    def record_idempotency_key(self, key: str, user_id: str | None = None) -> None:
         state = self._read()
         keys = set(state["idempotency_keys"])
         keys.add(key)
@@ -89,20 +95,24 @@ class FileStateStore:
             return False
         return now - int(last_fire_at) < cooldown_seconds
 
-    def record_rule_fire(self, rule_id: str, *, now: int) -> None:
+    def record_rule_fire(self, rule_id: str, *, now: int, user_id: str | None = None) -> None:
         state = self._read()
         state["last_rule_fire_at"][rule_id] = now
         self._write(state)
 
     def record_decision_state(
-        self, idempotency_key: str, rule_id: str | None = None, *, now: int = 0,
+        self, idempotency_key: str, rule_id: str | None = None, *, now: int = 0, user_id: str | None = None,
     ) -> None:
         """Atomically record idempotency key and optional rule fire."""
         if self.has_idempotency_key(idempotency_key):
             raise DuplicateStateRecordError(idempotency_key)
-        self.record_idempotency_key(idempotency_key)
+        self.record_idempotency_key(idempotency_key, user_id=user_id)
         if rule_id:
-            self.record_rule_fire(rule_id, now=now)
+            self.record_rule_fire(rule_id, now=now, user_id=user_id)
+
+    def query_by_user(self, user_id: str, limit: int = 50) -> list[dict[str, Any]]:
+        # File store mock just returns empty
+        return []
 
     def snapshot(self) -> dict[str, object]:
         state = self._read()
@@ -152,16 +162,19 @@ class DynamoDBStateStore:
         )
         return "Item" in response
 
-    def record_idempotency_key(self, key: str) -> None:
+    def record_idempotency_key(self, key: str, user_id: str | None = None) -> None:
         try:
+            item: dict[str, Any] = {
+                "pk": _idempotency_pk(key),
+                "record_type": "idempotency",
+                "idempotency_key": key,
+                "created_at": now_seconds(),
+                "ttl_epoch_seconds": now_seconds() + self.ttl_seconds,
+            }
+            if user_id:
+                item["user_id"] = user_id
             self.table.put_item(
-                Item={
-                    "pk": _idempotency_pk(key),
-                    "record_type": "idempotency",
-                    "idempotency_key": key,
-                    "created_at": now_seconds(),
-                    "ttl_epoch_seconds": now_seconds() + self.ttl_seconds,
-                },
+                Item=item,
                 ConditionExpression="attribute_not_exists(pk)",
             )
         except Exception as exc:  # noqa: BLE001 - boto3 exposes provider-specific subclasses
@@ -181,19 +194,21 @@ class DynamoDBStateStore:
         last_fire_at = int(item.get("last_fire_at", 0))
         return now - last_fire_at < cooldown_seconds
 
-    def record_rule_fire(self, rule_id: str, *, now: int) -> None:
-        self.table.put_item(
-            Item={
-                "pk": _rule_pk(rule_id),
-                "record_type": "cooldown",
-                "rule_id": rule_id,
-                "last_fire_at": now,
-                "ttl_epoch_seconds": now + 90 * 86400,
-            }
-        )
+    def record_rule_fire(self, rule_id: str, *, now: int, user_id: str | None = None) -> None:
+        item: dict[str, Any] = {
+            "pk": _rule_pk(rule_id),
+            "record_type": "cooldown",
+            "rule_id": rule_id,
+            "last_fire_at": now,
+            "created_at": now,
+            "ttl_epoch_seconds": now + 90 * 86400,
+        }
+        if user_id:
+            item["user_id"] = user_id
+        self.table.put_item(Item=item)
 
     def record_decision_state(
-        self, idempotency_key: str, rule_id: str | None = None, *, now: int = 0,
+        self, idempotency_key: str, rule_id: str | None = None, *, now: int = 0, user_id: str | None = None,
     ) -> None:
         """Atomically write idempotency key and cooldown via TransactWriteItems.
 
@@ -204,32 +219,42 @@ class DynamoDBStateStore:
         """
         client = self.table.meta.client
         now_ts = now_seconds()
+        
+        idemp_item: dict[str, Any] = {
+            "pk": {"S": _idempotency_pk(idempotency_key)},
+            "record_type": {"S": "idempotency"},
+            "idempotency_key": {"S": idempotency_key},
+            "created_at": {"N": str(now_ts)},
+            "ttl_epoch_seconds": {"N": str(now_ts + self.ttl_seconds)},
+        }
+        if user_id:
+            idemp_item["user_id"] = {"S": user_id}
+
         transact_items: list[dict[str, Any]] = [
             {
                 "Put": {
                     "TableName": self.table_name,
-                    "Item": {
-                        "pk": {"S": _idempotency_pk(idempotency_key)},
-                        "record_type": {"S": "idempotency"},
-                        "idempotency_key": {"S": idempotency_key},
-                        "created_at": {"N": str(now_ts)},
-                        "ttl_epoch_seconds": {"N": str(now_ts + self.ttl_seconds)},
-                    },
+                    "Item": idemp_item,
                     "ConditionExpression": "attribute_not_exists(pk)",
                 }
             }
         ]
         if rule_id:
+            rule_item: dict[str, Any] = {
+                "pk": {"S": _rule_pk(rule_id)},
+                "record_type": {"S": "cooldown"},
+                "rule_id": {"S": rule_id},
+                "last_fire_at": {"N": str(now)},
+                "created_at": {"N": str(now)},
+                "ttl_epoch_seconds": {"N": str(now + 90 * 86400)},
+            }
+            if user_id:
+                rule_item["user_id"] = {"S": user_id}
+            
             transact_items.append({
                 "Put": {
                     "TableName": self.table_name,
-                    "Item": {
-                        "pk": {"S": _rule_pk(rule_id)},
-                        "record_type": {"S": "cooldown"},
-                        "rule_id": {"S": rule_id},
-                        "last_fire_at": {"N": str(now)},
-                        "ttl_epoch_seconds": {"N": str(now + 90 * 86400)},
-                    },
+                    "Item": rule_item,
                 }
             })
         try:
@@ -239,6 +264,16 @@ class DynamoDBStateStore:
             if _is_conditional_check_failed(exc) or "TransactionCanceledException" in exc_name:
                 raise DuplicateStateRecordError(idempotency_key) from exc
             raise
+
+    def query_by_user(self, user_id: str, limit: int = 50) -> list[dict[str, Any]]:
+        from boto3.dynamodb.conditions import Key  # type: ignore[import-not-found]
+        response = self.table.query(
+            IndexName="user-index",
+            KeyConditionExpression=Key("user_id").eq(user_id),
+            ScanIndexForward=False,
+            Limit=limit,
+        )
+        return list(response.get("Items", []))
 
     def snapshot(self) -> dict[str, object]:
         return {

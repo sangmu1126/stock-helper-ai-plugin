@@ -104,6 +104,7 @@ def _handle_event(event: dict[str, Any], context: Any) -> dict[str, Any]:
         policy_result=policy_result,
         trigger_evaluation=trigger_result,
         now=now,
+        user_id=str(event.get("user_id", "anonymous")),
     ).to_dict()
     decision_log = _DECISION_LOG.create_decision_log(
         rule_id=decision_result["rule_id"],
