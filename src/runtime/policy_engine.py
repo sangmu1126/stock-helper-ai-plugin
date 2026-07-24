@@ -11,17 +11,87 @@ from config_provider import ConfigSnapshot, load_config
 POLICY_VERSION = "policy.safe-trade.v1"
 DEFAULT_POLICY_CONFIG: dict[str, Any] = {
     "version": POLICY_VERSION,
-    "investment_advice_patterns": ["추천", "뭐 사", "무슨 종목", "오를 종목", "수익 낼", "종목 골라", "best stock", "recommend"],
-    "severe_emotional_flags": ["all_in"],
     "actions": {
-        "investment_advice_request": "BLOCK",
-        "severe_emotional_risk": "BLOCK",
-        "emotional_risk": "REQUIRE_CLARIFICATION",
-        "missing_order_limit": "REQUIRE_CLARIFICATION",
         "parser_ambiguity": "REQUIRE_CLARIFICATION",
-        "notify_only": "ALLOW",
         "default": "ALLOW",
     },
+    "rules": [
+        {
+            "id": "investment_advice_request",
+            "type": "terminal",
+            "decision": "BLOCK",
+            "reason": "INVESTMENT_ADVICE_REQUEST_BLOCKED",
+            "downgraded_action": "clarify_action",
+            "human_review_required": True,
+            "blocked": True,
+            "condition": {
+                "type": "intent_match",
+                "patterns": ["추천", "뭐 사", "무슨 종목", "오를 종목", "수익 낼", "종목 골라", "best stock", "recommend"]
+            }
+        },
+        {
+            "id": "severe_emotional_risk",
+            "type": "terminal",
+            "decision": "BLOCK",
+            "reason": "SEVERE_EMOTIONAL_RISK_BLOCKED",
+            "downgraded_action": "clarify_action",
+            "human_review_required": True,
+            "blocked": True,
+            "condition": {
+                "type": "emotional_flag_match",
+                "flags": ["all_in"]
+            }
+        },
+        {
+            "id": "emotional_risk",
+            "type": "terminal",
+            "decision": "REQUIRE_CLARIFICATION",
+            "reason": "EMOTIONAL_RISK_REQUIRES_REWRITE",
+            "downgraded_action": "clarify_action",
+            "human_review_required": True,
+            "blocked": False,
+            "condition": {
+                "type": "has_emotional_flags"
+            }
+        },
+        {
+            "id": "order_limit_required",
+            "type": "accumulate",
+            "reason": "ORDER_LIMIT_REQUIRED",
+            "condition": {
+                "type": "order_mode",
+                "actions": ["prepare_buy_order", "prepare_sell_order"],
+                "mode": "required_before_activation"
+            }
+        },
+        {
+            "id": "trigger_requires_clarification",
+            "type": "accumulate",
+            "reason": "TRIGGER_REQUIRES_CLARIFICATION",
+            "condition": {
+                "type": "trigger_type",
+                "types": ["needs_clarification", "price_move_percent"]
+            }
+        },
+        {
+            "id": "parser_ambiguity",
+            "type": "accumulate",
+            "reason": "PARSER_AMBIGUITY_REQUIRES_CLARIFICATION",
+            "condition": {
+                "type": "has_ambiguities"
+            }
+        },
+        {
+            "id": "notify_only",
+            "type": "terminal",
+            "decision": "ALLOW",
+            "reason": "NOTIFY_ONLY_WITH_NO_ORDER_PERMISSION",
+            "condition": {
+                "type": "action_match",
+                "actions": ["notify_only"]
+            }
+        }
+    ]
 }
 
 
@@ -44,8 +114,29 @@ class PolicyEngine:
         self.config_snapshot = config_snapshot or load_policy_config_snapshot(policy_config)
         self.config = self.config_snapshot.data
         self.version = str(self.config.get("version", POLICY_VERSION))
-        self.actions = dict(DEFAULT_POLICY_CONFIG["actions"])
+        self.actions = dict(DEFAULT_POLICY_CONFIG.get("actions", {}))
         self.actions.update(self.config.get("actions", {}))
+        self.rules = self.config.get("rules", DEFAULT_POLICY_CONFIG.get("rules", []))
+
+    def _match_condition(self, condition: dict[str, Any], intent: str, action: str, order: dict[str, Any], trigger: dict[str, Any], emotional_flags: list[dict[str, str]], ambiguities: list[dict[str, Any]]) -> bool:
+        ctype = condition.get("type")
+        if ctype == "intent_match":
+            normalized = intent.lower()
+            return any(str(pattern).lower() in normalized for pattern in condition.get("patterns", []))
+        if ctype == "emotional_flag_match":
+            flags = {item.get("flag", "") for item in emotional_flags}
+            return bool(flags & set(condition.get("flags", [])))
+        if ctype == "has_emotional_flags":
+            return bool(emotional_flags)
+        if ctype == "order_mode":
+            return action in condition.get("actions", []) and order.get("mode") == condition.get("mode")
+        if ctype == "trigger_type":
+            return trigger.get("type") in condition.get("types", [])
+        if ctype == "has_ambiguities":
+            return bool(ambiguities)
+        if ctype == "action_match":
+            return action in condition.get("actions", [])
+        return False
 
     def evaluate(
         self,
@@ -66,61 +157,39 @@ class PolicyEngine:
             "policy_config_source": self.config_snapshot.source,
             "policy_config_fallback_used": self.config_snapshot.fallback_used,
         }
-        if _contains_investment_advice_request(intent, self.config):
+        
+        accumulated_reasons: list[str] = []
+        
+        for rule in self.rules:
+            condition = rule.get("condition", {})
+            if self._match_condition(condition, intent, action, order, trigger, emotional_flags, ambiguities):
+                if rule.get("type") == "terminal":
+                    if rule.get("reason") in ["SEVERE_EMOTIONAL_RISK_BLOCKED", "EMOTIONAL_RISK_REQUIRES_REWRITE"]:
+                        metadata["emotional_flags"] = sorted({item.get("flag", "") for item in emotional_flags})
+                    
+                    return PolicyResult(
+                        decision=rule.get("decision", "BLOCK"),
+                        reasons=(rule.get("reason"),),
+                        downgraded_action=rule.get("downgraded_action"),
+                        policy_version=self.version,
+                        human_review_required=rule.get("human_review_required", False),
+                        blocked=rule.get("blocked", False),
+                        metadata=metadata,
+                    )
+                elif rule.get("type") == "accumulate":
+                    accumulated_reasons.append(rule.get("reason"))
+
+        if accumulated_reasons:
             return PolicyResult(
-                decision=self.actions["investment_advice_request"],
-                reasons=("INVESTMENT_ADVICE_REQUEST_BLOCKED",),
-                downgraded_action="clarify_action",
-                policy_version=self.version,
-                human_review_required=True,
-                blocked=True,
-                metadata=metadata,
-            )
-        if emotional_flags:
-            flags = {item.get("flag", "") for item in emotional_flags}
-            severe_flags = set(self.config.get("severe_emotional_flags", DEFAULT_POLICY_CONFIG["severe_emotional_flags"]))
-            if flags & severe_flags:
-                return PolicyResult(
-                    decision=self.actions["severe_emotional_risk"],
-                    reasons=("SEVERE_EMOTIONAL_RISK_BLOCKED",),
-                    downgraded_action="clarify_action",
-                    policy_version=self.version,
-                    human_review_required=True,
-                    blocked=True,
-                    metadata={**metadata, "emotional_flags": sorted(flags)},
-                )
-            return PolicyResult(
-                decision=self.actions["emotional_risk"],
-                reasons=("EMOTIONAL_RISK_REQUIRES_REWRITE",),
-                downgraded_action="clarify_action",
-                policy_version=self.version,
-                human_review_required=True,
-                metadata={**metadata, "emotional_flags": sorted(flags)},
-            )
-        reasons: list[str] = []
-        if action in {"prepare_buy_order", "prepare_sell_order"} and order.get("mode") == "required_before_activation":
-            reasons.append("ORDER_LIMIT_REQUIRED")
-        if trigger.get("type") in {"needs_clarification", "price_move_percent"}:
-            reasons.append("TRIGGER_REQUIRES_CLARIFICATION")
-        if ambiguities:
-            reasons.append("PARSER_AMBIGUITY_REQUIRES_CLARIFICATION")
-        if reasons:
-            return PolicyResult(
-                decision=self.actions["parser_ambiguity"],
-                reasons=tuple(sorted(set(reasons))),
+                decision=self.actions.get("parser_ambiguity", "REQUIRE_CLARIFICATION"),
+                reasons=tuple(sorted(set(accumulated_reasons))),
                 policy_version=self.version,
                 human_review_required=True,
                 metadata=metadata,
             )
-        if action == "notify_only":
-            return PolicyResult(
-                decision=self.actions["notify_only"],
-                reasons=("NOTIFY_ONLY_WITH_NO_ORDER_PERMISSION",),
-                policy_version=self.version,
-                metadata=metadata,
-            )
+
         return PolicyResult(
-            decision=self.actions["default"],
+            decision=self.actions.get("default", "ALLOW"),
             reasons=("POLICY_PASSED",),
             policy_version=self.version,
             metadata=metadata,
