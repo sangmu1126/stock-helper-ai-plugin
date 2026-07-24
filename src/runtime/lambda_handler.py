@@ -197,6 +197,9 @@ def _handle_event(event: dict[str, Any], context: Any) -> dict[str, Any]:
     missing_fields = _RESPONSE.validate_response(response)
     if missing_fields:
         response["schema_validation_errors"] = missing_fields
+
+    _OBSERVABILITY.emit_emf_metrics(response["trace"], response["metrics"])
+    
     return response
 
 
