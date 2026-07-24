@@ -26,7 +26,7 @@ jobs:
         
     - name: Lint with Ruff
       run: |
-        ruff check .
+        ruff check --output-format=github .
         
     - name: Test with pytest
       env:
