@@ -43,6 +43,51 @@ Resources:
             TableName: !Ref SafeTradeStateTable
         - DynamoDBCrudPolicy:
             TableName: !Ref SafeTradeDecisionLogTable
+      Events:
+        EvaluateRule:
+          Type: Api
+          Properties:
+            RestApiId: !Ref SafeTradeApi
+            Path: /evaluate
+            Method: post
+
+  SafeTradeApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Auth:
+        ApiKeyRequired: true
+
+  SafeTradeApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    DependsOn:
+      - SafeTradeApiProdStage
+    Properties:
+      Name: SafeTradeRuntimeKey
+      Enabled: true
+
+  SafeTradeUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn:
+      - SafeTradeApiProdStage
+    Properties:
+      UsagePlanName: SafeTradeBasicPlan
+      ApiStages:
+        - ApiId: !Ref SafeTradeApi
+          Stage: prod
+      Quota:
+        Limit: 10000
+        Period: MONTH
+      Throttle:
+        BurstLimit: 50
+        RateLimit: 20
+
+  SafeTradeUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref SafeTradeApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref SafeTradeUsagePlan
 
   SafeTradeStateTable:
     Type: AWS::DynamoDB::Table
@@ -99,6 +144,8 @@ Resources:
         Enabled: true
 
 Outputs:
+  RuntimeApiEndpoint:
+    Value: !Sub "https://${SafeTradeApi}.execute-api.${AWS::Region}.amazonaws.com/prod/evaluate"
   RuntimeFunctionName:
     Value: !Ref SafeTradeRuntimeFunction
   StateTableName:

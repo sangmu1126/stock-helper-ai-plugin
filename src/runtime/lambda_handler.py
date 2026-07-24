@@ -6,6 +6,7 @@ requirements before returning a decision object.
 """
 from __future__ import annotations
 
+import json
 import sys
 import time
 from pathlib import Path
@@ -16,6 +17,7 @@ _RUNTIME_DIR = Path(__file__).resolve().parent
 if str(_RUNTIME_DIR) not in sys.path:
     sys.path.insert(0, str(_RUNTIME_DIR))
 
+import auth as _AUTH  # noqa: E402
 import config as _CONFIG  # noqa: E402
 import confirmation as _CONFIRMATION  # noqa: E402
 import decision_engine as _DECISION  # noqa: E402
@@ -34,10 +36,28 @@ from evaluation import OPEN_MARKET_STATES, evaluate_trigger, quote_age_status  #
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
+    is_api_gateway = "httpMethod" in event or "routeKey" in event or ("requestContext" in event and "http" in event.get("requestContext", {}))
     try:
-        return _handle_event(event, context)
+        if is_api_gateway:
+            auth_rejection = _AUTH.validate_api_key(event)
+            if auth_rejection:
+                return auth_rejection
+            body = event.get("body", "{}")
+            payload = json.loads(body) if isinstance(body, str) else body
+        else:
+            payload = event
+
+        response_payload = _handle_event(payload, context)
+        
+        if is_api_gateway:
+            return {
+                "statusCode": 200,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps(response_payload, ensure_ascii=False),
+            }
+        return response_payload
     except Exception as exc:  # noqa: BLE001 - top-level fail-closed boundary
-        return _RESPONSE.envelope({
+        error_payload = _RESPONSE.envelope({
             "decision": "STOP",
             "reasons": ["INTERNAL_ERROR"],
             "errors": _ERRORS.describe_reasons(["INTERNAL_ERROR"]),
@@ -45,6 +65,13 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             "user_action": "시스템 내부 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
             "internal_error": f"{type(exc).__name__}: {exc}",
         })
+        if is_api_gateway:
+            return {
+                "statusCode": 500,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps(error_payload, ensure_ascii=False),
+            }
+        return error_payload
 
 
 def _handle_event(event: dict[str, Any], context: Any) -> dict[str, Any]:
