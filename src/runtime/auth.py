@@ -33,7 +33,7 @@ def validate_api_gateway_auth(event: dict[str, Any]) -> tuple[dict[str, Any] | N
     try:
         # Mock: token is just base64 encoded JSON payload (e.g. eyJzdWIiOiAidXNlcjEyMyJ9)
         # In production, use python-jose or jwt to decode and verify signature against JWKS
-        padding = "=" * (4 - len(token) % 4)
+        padding = "=" * ((4 - len(token) % 4) % 4)
         decoded_bytes = base64.b64decode(token + padding)
         payload = json.loads(decoded_bytes)
         user_id = payload.get("sub")
