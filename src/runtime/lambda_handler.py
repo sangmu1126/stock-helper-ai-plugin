@@ -179,6 +179,8 @@ def _handle_event(event: dict[str, Any], context: Any) -> dict[str, Any]:
             decision_result_dict["decision"] = "WAIT"
             decision_result_dict["reasons"] = ["DUPLICATE_DECISION_BLOCKED"]
             decision_result_dict["is_new_decision"] = False
+            decision_log["decision"] = "WAIT"
+            decision_log["reasons"] = ("DUPLICATE_DECISION_BLOCKED",)
 
     decision_result = decision_result_dict
 
@@ -219,7 +221,8 @@ def _handle_event(event: dict[str, Any], context: Any) -> dict[str, Any]:
         response["schema_validation_errors"] = missing_fields
 
     _OBSERVABILITY.emit_emf_metrics(response["trace"], response["metrics"])
-    _OBSERVABILITY.emit_async_decision_event(decision_log)
+    if decision_result.get("is_new_decision"):
+        _OBSERVABILITY.emit_async_decision_event(decision_log)
     
     return response
 
