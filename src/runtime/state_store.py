@@ -260,9 +260,9 @@ class DynamoDBStateStore:
         if decision_log and self.log_table_name:
             import json
             log_item: dict[str, Any] = {
-                "decision_id": {"S": decision_log["id"]},
-                "user_id": {"S": decision_log["user_id"]},
-                "created_at": {"N": str(decision_log["created_at"])},
+                "decision_id": {"S": decision_log["decision_id"]},
+                "user_id": {"S": decision_log["user_id_hash"]},
+                "created_at": {"S": decision_log["created_at"]},
                 "log_document": {"S": json.dumps(decision_log, ensure_ascii=False)},
                 "ttl_epoch_seconds": {"N": str(decision_log.get("ttl_epoch_seconds", now + 90 * 86400))}
             }
