@@ -1,0 +1,8 @@
+# 앱 담보부족 알림 설정 (가상 예시)
+margin_notice:
+  maintenance_ratio: 130
+  emergency_ratio: 120
+  watch_alert_ratio: 145
+  liquidation_after_business_days: 3
+  deposit_deadline_business_days: 1
+  message_template: "담보비율이 {ratio}%입니다. 120% 이상이면 안전합니다."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Margin Rule Check"
+  short_description: "상담 문구·앱 설정·계산 코드의 담보비율·반대매매 규칙 점검"
+  default_prompt: "Use $margin-rule-check to verify our counseling scripts and margin config against the official collateral rules."
