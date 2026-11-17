@@ -40,11 +40,10 @@ def detect_action(intent: str) -> str:
 
 
 def detect_trigger(intent: str) -> dict[str, object]:
-    price = detect_price_krw(intent)
-    if price is not None and any(word in intent for word in ["넘", "이상", "돌파"]):
-        return {"type": "price_cross_above", "price": price, "currency": "KRW"}
-    if price is not None and any(word in intent for word in ["밑", "아래", "이하", "미만"]):
-        return {"type": "price_cross_below", "price": price, "currency": "KRW"}
+    condition = detect_price_condition(intent)
+    if condition is not None:
+        direction, price, currency = condition
+        return {"type": f"price_cross_{direction}", "price": price, "currency": currency}
 
     reference = detect_reference(intent)
     lookback = detect_lookback_days(intent)
@@ -106,13 +105,31 @@ def detect_reference(intent: str) -> str:
     return "previous_close"
 
 
-def detect_price_krw(intent: str) -> float | None:
-    manwon = re.search(r"(\d+(?:\.\d+)?)\s*만\s*원", intent)
-    if manwon:
-        return float(manwon.group(1)) * 10000
-    won = re.search(r"(\d{4,})\s*원", intent)
-    if won:
-        return float(won.group(1))
+_KRW_PRICE_RE = re.compile(r"(?<![\d.,])(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)\s*(억|천만|백만|만)?\s*원")
+_USD_PRICE_RE = re.compile(
+    r"\$\s*(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)|(?<![\d.,])(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)\s*(?:달러|불|usd)", re.IGNORECASE
+)
+_PRICE_UNITS = {None: 1, "만": 10_000, "백만": 1_000_000, "천만": 10_000_000, "억": 100_000_000}
+# 가격 바로 뒤(조사 허용)에 방향을 나타내는 말이 와야 가격 조건으로 본다: "4만원 아래로", "$180 넘으면", "200달러를 돌파하면"
+_PRICE_BELOW_RE = re.compile(r"^\s*(?:을|를|이|가|선|대)?\s*(?:밑|아래|이하|미만|깨지|하회)")
+_PRICE_ABOVE_RE = re.compile(r"^\s*(?:을|를|이|가|선|대)?\s*(?:위|넘|이상|초과|돌파|상회)")
+
+
+def detect_price_condition(intent: str) -> tuple[str, float, str] | None:
+    """("below"|"above", 가격, "KRW"|"USD"). 가격 바로 뒤에 방향을 나타내는 말이 있을 때만 가격 조건으로 본다."""
+    candidates: list[tuple[int, float, str, int]] = []
+    for match in _KRW_PRICE_RE.finditer(intent):
+        number = float(match.group(1).replace(",", "")) * _PRICE_UNITS[match.group(2)]
+        candidates.append((match.start(), number, "KRW", match.end()))
+    for match in _USD_PRICE_RE.finditer(intent):
+        number = float((match.group(1) or match.group(2)).replace(",", ""))
+        candidates.append((match.start(), number, "USD", match.end()))
+    for _, price, currency, end in sorted(candidates):
+        rest = intent[end:]
+        if _PRICE_BELOW_RE.match(rest):
+            return ("below", price, currency)
+        if _PRICE_ABOVE_RE.match(rest):
+            return ("above", price, currency)
     return None
 
 
@@ -141,10 +158,10 @@ def detect_order(intent: str) -> dict[str, object]:
     return {"mode": "required_before_activation"}
 
 
-_AMOUNT_RE = re.compile(r"(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)\s*(억|천만|백만|만)?\s*원")
+_AMOUNT_RE = re.compile(r"(?<![\d.,])(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)\s*(억|천만|백만|만)?\s*원")
 _AMOUNT_UNITS = {None: 1, "만": 10_000, "백만": 1_000_000, "천만": 10_000_000, "억": 100_000_000}
 # 금액 뒤에 이런 말이 오면 주문 금액이 아니라 가격 조건이다: "4만원 아래로", "55000원 되면", "4만원에 사줘"
-_PRICE_CONTEXT_RE = re.compile(r"^\s*(?:아래|이하|미만|밑|위|이상|초과|넘|돌파|도달|되면|선|대|에\s)")
+_PRICE_CONTEXT_RE = re.compile(r"^\s*(?:을|를|이|가)?\s*(?:아래|이하|미만|밑|위|이상|초과|넘|돌파|상회|하회|깨지|도달|되면|선|대|에\s)")
 
 
 def detect_amount_krw(intent: str) -> float | None:
@@ -159,6 +176,15 @@ def detect_amount_krw(intent: str) -> float | None:
 
 def detect_time_window(intent: str) -> dict[str, object]:
     window: dict[str, object] = {"market_session": "regular"}
+    lowered = intent.lower()
+    if any(word in intent for word in ["애프터마켓", "시간외", "장후", "장 마감 후"]) or any(
+        word in lowered for word in ["after-hours", "after hours", "aftermarket"]
+    ):
+        window["market_session"] = "after_hours"
+    elif any(word in intent for word in ["프리마켓", "장전", "장 시작 전"]) or any(
+        word in lowered for word in ["pre-market", "premarket"]
+    ):
+        window["market_session"] = "pre_market"
     if any(word in intent for word in ["장 시작 직후 제외", "장초반 제외", "장 초반 제외"]):
         window["exclude_open_minutes"] = 10
     if "오전" in intent and any(word in intent for word in ["하지 말", "제외"]):

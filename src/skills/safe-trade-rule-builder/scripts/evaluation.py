@@ -6,7 +6,12 @@ from typing import Any
 from models import MAX_QUOTE_AGE_SECONDS, OPEN_MARKET_STATES, MarketQuote
 
 
-def evaluate_trigger(trigger: dict[str, Any], quote: MarketQuote | dict[str, Any] | None) -> dict[str, Any] | None:
+def evaluate_trigger(
+    trigger: dict[str, Any],
+    quote: MarketQuote | dict[str, Any] | None,
+    *,
+    allowed_states: frozenset[str] | set[str] | None = None,
+) -> dict[str, Any] | None:
     if quote is None:
         return None
     quote_data = _quote_to_dict(quote)
@@ -18,13 +23,14 @@ def evaluate_trigger(trigger: dict[str, Any], quote: MarketQuote | dict[str, Any
             "details": health,
         }
     market_state = quote_data.get("market_state")
-    if market_state not in OPEN_MARKET_STATES:
+    states = allowed_states or OPEN_MARKET_STATES
+    if market_state not in states:
         return {
             "status": "STOP",
             "reason": "MARKET_NOT_OPEN",
             "details": {
                 "market_state": market_state,
-                "allowed_states": sorted(OPEN_MARKET_STATES),
+                "allowed_states": sorted(states),
             },
         }
     age_seconds = int_or_none(quote_data.get("age_seconds"))
@@ -88,6 +94,14 @@ def evaluate_trigger_fields(trigger: dict[str, Any], quote: dict[str, Any]) -> d
     if trigger_type in {"price_cross_above", "price_cross_below"}:
         if current_price is None or trigger_price is None:
             return {"status": "STOP", "reason": "MISSING_PRICE_FOR_TRIGGER_EVALUATION"}
+        trigger_currency, quote_currency = trigger.get("currency"), quote.get("currency")
+        if trigger_currency and quote_currency and str(trigger_currency).upper() != str(quote_currency).upper():
+            # 예: 미국 주식 시세(USD)에 원화 가격 조건(KRW)을 비교하면 결과가 틀리므로 평가하지 않는다.
+            return {
+                "status": "STOP",
+                "reason": "TRIGGER_CURRENCY_MISMATCH",
+                "details": {"trigger_currency": trigger_currency, "quote_currency": quote_currency},
+            }
         matched = (
             trigger_type == "price_cross_above"
             and current_price >= trigger_price

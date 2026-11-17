@@ -48,6 +48,35 @@ sample_dates = [2026-11-18]     # 거래일(평일)만
   source = "E5"
 ```
 
+## 특수일 (거래소가 시간을 바꾼 날)
+
+```toml
+[[special_day]]
+date = 2026-11-19
+name = "2027학년도 수능일"
+confirmed_until = "16:30"   # 이 시각 이후는 공지가 없어 경계 테스트를 만들지 않는다
+source = "CSAT_2026"
+
+  # probe 구간에 날짜 조건을 단다
+  [[probe.window]]          # 평소 정규장: 수능일에는 적용 안 함
+  start = "09:00"
+  end = "15:30"
+  expect = "REGULAR"
+  exclude_dates = [2026-11-19]
+  source = "KRX"
+
+  [[probe.window]]          # 수능일 정규장: 그날만 적용
+  start = "10:00"
+  end = "16:30"
+  expect = "REGULAR"
+  dates = [2026-11-19]
+  source = "CSAT_2026"
+```
+
+- `dates`가 있으면 그 날짜에만, `exclude_dates`에 든 날짜에는 적용하지 않는다.
+- 특수일에는 그날 적용되는 구간의 경계와 함께, **그날 빠진 평소 구간의 경계**(예: 09:00, 15:30)도 검사한다. 하드코딩된 평소 시각이 특수일에 틀리는 것을 잡기 위해서다.
+- 특수일 시각을 코드에 둘 때는 `# mhg: KRX_REGULAR_OPEN_CSAT_2026`처럼 특수일용 경계 ID로 주석을 단다.
+
 ## 키워드 일치 규칙
 
 - 영문: 식별자를 단어로 쪼갠 토큰과 일치. 4자 이상 키워드는 접두어 일치(`rout` → router, routing).

@@ -1,0 +1,39 @@
+{
+  "version": "sessions.2026-11-18b",
+  "note": "룰의 시간 조건과 세션(정규장·애프터마켓)을 판정하는 거래시간. market-hours-guard 기준표(assets/calendar.demo.toml)와 값이 같아야 하며 테스트가 일치를 검사한다.",
+  "sources": {
+    "KRX": "한국거래소 정규시장 09:00~15:30",
+    "KRX_AFTER": "머니투데이 2026-09-13: KRX 애프터마켓 2026-09-14 개장, 16:00~20:00",
+    "CSAT_2026": "한국거래소 2026-11-05 발표: 2027학년도 수능일(2026-11-19) 정규장 10:00~16:30으로 1시간 순연, 프리마켓 미운영 (SBS Biz·뉴닉 보도)",
+    "NYSE": "미국 정규장 09:30~16:00 (America/New_York, 서머타임은 시간대 규칙으로 처리)",
+    "PRODUCT": "제품 설정 — '오전'을 정규장 시작부터 12:00까지로 정의"
+  },
+  "markets": {
+    "KRX": {
+      "tz": "Asia/Seoul",
+      "symbol_suffixes": [".KS", ".KQ"],
+      "morning_end": "12:00",
+      "sessions": {
+        "regular": {"open": "09:00", "close": "15:30", "source": "KRX"},
+        "after_hours": {"open": "16:00", "close": "20:00", "effective_from": "2026-09-14", "source": "KRX_AFTER"}
+      },
+      "special_days": [
+        {
+          "date": "2026-11-19", "id": "CSAT_2026", "name": "2027학년도 수능일", "source": "CSAT_2026",
+          "sessions": {"regular": {"open": "10:00", "close": "16:30"}},
+          "unconfirmed_sessions": ["after_hours"]
+        }
+      ]
+    },
+    "US": {
+      "tz": "America/New_York",
+      "symbol_suffixes": [],
+      "morning_end": "12:00",
+      "sessions": {
+        "regular": {"open": "09:30", "close": "16:00", "source": "NYSE"}
+      },
+      "special_days": []
+    }
+  },
+  "morning_source": "PRODUCT"
+}

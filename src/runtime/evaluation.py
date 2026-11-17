@@ -48,6 +48,13 @@ def evaluate_trigger(trigger: dict[str, Any], quote: dict[str, Any]) -> dict[str
     if trigger_type in {"price_cross_above", "price_cross_below"}:
         if current_price is None or trigger_price is None:
             return {"status": "STOP", "reason": "MISSING_PRICE_FOR_TRIGGER_EVALUATION"}
+        trigger_currency, quote_currency = trigger.get("currency"), quote.get("currency")
+        if trigger_currency and quote_currency and str(trigger_currency).upper() != str(quote_currency).upper():
+            return {
+                "status": "STOP",
+                "reason": "TRIGGER_CURRENCY_MISMATCH",
+                "details": {"trigger_currency": trigger_currency, "quote_currency": quote_currency},
+            }
         matched = (
             trigger_type == "price_cross_above"
             and current_price >= trigger_price

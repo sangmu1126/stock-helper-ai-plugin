@@ -27,10 +27,9 @@ def test_boundaries_are_half_open(calendar):
 
 
 def test_effective_from_excludes_window_before_cutover(tmp_path, calendar_path):
-    text = calendar_path.read_text(encoding="utf-8").replace(
-        "sample_dates = [2026-11-18]\n\n  [[probe.window]]\n  start = \"09:00\"\n  end = \"15:30\"",
-        "sample_dates = [2026-09-11]\n\n  [[probe.window]]\n  start = \"09:00\"\n  end = \"15:30\"",
-    )
+    original = calendar_path.read_text(encoding="utf-8")
+    assert "sample_dates = [2026-11-18, 2026-11-19]" in original
+    text = original.replace("sample_dates = [2026-11-18, 2026-11-19]", "sample_dates = [2026-09-11]")
     path = tmp_path / "cal.toml"
     path.write_text(text, encoding="utf-8")
     krx = cases_for(load_calendar(path), "krx_session")
@@ -40,10 +39,25 @@ def test_effective_from_excludes_window_before_cutover(tmp_path, calendar_path):
 
 def test_write_tests_keeps_existing_adapter(tmp_path, calendar):
     first = write_tests(calendar, tmp_path)
-    assert first["adapter_created"] and first["cases"] == 28
+    assert first["adapter_created"] and first["cases"] == 37
     adapter = tmp_path / ADAPTER_NAME
     assert "'krx_session': None" in adapter.read_text(encoding="utf-8")
     adapter.write_text("PROBES = {}\n", encoding="utf-8")
     second = write_tests(calendar, tmp_path)
     assert not second["adapter_created"]
     assert adapter.read_text(encoding="utf-8") == "PROBES = {}\n"
+
+
+def test_special_day_moves_regular_session_and_skips_unconfirmed_hours(calendar):
+    krx = cases_for(calendar, "krx_session")
+    # 수능일(2026-11-19): 정규장 10:00~16:30. 평소 경계(09:00, 15:30, 16:00)도 그날 기준으로 검사한다.
+    assert krx["2026-11-19T09:00:00+09:00"] == "CLOSED"
+    assert krx["2026-11-19T09:59:59+09:00"] == "CLOSED"
+    assert krx["2026-11-19T10:00:00+09:00"] == "REGULAR"
+    assert krx["2026-11-19T15:30:00+09:00"] == "REGULAR"
+    assert krx["2026-11-19T16:29:59+09:00"] == "REGULAR"
+    # 16:30 이후(애프터마켓 등)는 거래소 공지가 없어 기대값을 만들지 않는다.
+    assert not [at for at in krx if at.startswith(("2026-11-19T16:3", "2026-11-19T19"))]
+    # 평일 기준은 그대로
+    assert krx["2026-11-18T09:00:00+09:00"] == "REGULAR"
+    assert krx["2026-11-18T16:00:00+09:00"] == "AFTER"

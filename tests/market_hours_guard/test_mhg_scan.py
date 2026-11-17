@@ -33,7 +33,7 @@ def test_fixed_repo_is_clean_and_reviewed(calendar, examples):
     result = scan_repo(examples / "toy-broker-fixed", calendar)
     assert {f.status for f in result.findings} == {"MATCH"}
     annotated = [f for f in result.findings if f.reviewed]
-    assert len(annotated) == 11
+    assert len(annotated) == 13
     cron = next(f for f in result.findings if f.path == "config/batch_jobs.yaml")
     assert (cron.found, cron.expected, cron.boundary) == ("20:05", "20:05", "SOR_END")
 

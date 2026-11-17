@@ -78,14 +78,20 @@ def build_cases(cal: Calendar) -> list[dict]:
         probe_tz = get_tz(probe.tz)
         for day in probe.sample_dates:
             windows = sorted((w for w in probe.windows if w.applies(day)), key=lambda w: w.start)
+            special = cal.special_day(day)
+            # 특수일에 적용이 빠진 평소 구간의 경계도 검사한다(예: 수능일 09:00에는 아직 정규장이 아님).
+            moved = [w for w in probe.windows if day in w.exclude_dates]
             points: dict[datetime, str] = {}
-            for w in windows:
+            for w, suffix in [(w, "") for w in windows] + [(w, " (평소 경계)") for w in moved]:
                 for edge, edge_name in ((w.start, "시작"), (w.end, "종료")):
                     at = datetime.combine(day, edge, tzinfo=probe_tz)
-                    span = f"{fmt_time(w.start)}~{fmt_time(w.end)}"
+                    span = f"{fmt_time(w.start)}~{fmt_time(w.end)}{suffix}"
                     points.setdefault(at - timedelta(seconds=1), f"{span} {edge_name} 1초 전")
                     points.setdefault(at, f"{span} {edge_name} 정각")
+            cutoff = special.confirmed_until if special else None
             for at in sorted(points):
+                if cutoff and at.astimezone(local_tz).time() >= cutoff:
+                    continue  # 거래소가 공지하지 않은 시간대는 기대값을 정할 수 없어 뺀다
                 local_in_probe = at.astimezone(probe_tz)
                 expect, where = _expected(windows, probe, local_in_probe.time())
                 local = at.astimezone(local_tz)
@@ -95,7 +101,7 @@ def build_cases(cal: Calendar) -> list[dict]:
                     "at": local.isoformat(),
                     "probe_time": f"{local_in_probe.strftime('%Y-%m-%d %H:%M:%S')} {local_in_probe.tzname()}",
                     "expect": expect,
-                    "why": f"{probe.description or probe.id}: {points[at]} → {where}",
+                    "why": (f"[{special.name}] " if special else "") + f"{probe.description or probe.id}: {points[at]} → {where}",
                 })
     return cases
 

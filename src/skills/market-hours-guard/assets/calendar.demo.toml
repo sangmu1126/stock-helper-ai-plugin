@@ -14,6 +14,7 @@ E5 = "머니투데이 2026-09-13: KRX 애프터마켓 2026-09-14 개장, 16:00~2
 E6 = "MTN 2026-09-14: 애프터마켓 개장으로 SOR 적용 시간이 15:30에서 20:00까지로 연장"
 E7 = "스페셜타임즈 2026-09-14: NXT 프리마켓 08:00~08:50 운영 중 장애"
 NYSE = "미국 정규장 09:30~16:00 (America/New_York, 서머타임은 시간대 규칙으로 처리)"
+CSAT_2026 = "한국거래소 2026-11-05 발표: 2027학년도 수능일(2026-11-19) 정규장 10:00~16:30, 프리마켓 미운영 (SBS Biz·뉴닉 보도)"
 DEMO = "데모 시스템 가정 — 실제 회사 규칙이 아님"
 
 [scan]
@@ -90,6 +91,22 @@ effective_from = 2026-09-14
 source = "E6"
 
 [[boundary]]
+id = "KRX_REGULAR_OPEN_CSAT_2026"
+market = "KRX"
+time = "10:00"
+meaning = "수능일(2026-11-19) KRX 정규장 시작 — 평소보다 1시간 늦음"
+keywords = ["csat", "수능", "special"]
+source = "CSAT_2026"
+
+[[boundary]]
+id = "KRX_REGULAR_CLOSE_CSAT_2026"
+market = "KRX"
+time = "16:30"
+meaning = "수능일(2026-11-19) KRX 정규장 마감 — 평소보다 1시간 늦음"
+keywords = ["csat", "수능", "special"]
+source = "CSAT_2026"
+
+[[boundary]]
 id = "MORNING_END"
 market = "PRODUCT"
 time = "12:00"
@@ -127,6 +144,15 @@ replaced_by = "SOR_END"
 retired_on = 2026-09-14
 source = "E6"
 
+# ── 특수일 (거래소가 거래시간을 바꾼 날) ─────────────────────
+
+[[special_day]]
+date = 2026-11-19
+name = "2027학년도 수능일"
+# 정규장 이후 일정(애프터마켓 등)은 공지로 확인되지 않아 이 시각부터는 경계 테스트를 만들지 않는다.
+confirmed_until = "16:30"
+source = "CSAT_2026"
+
 # ── 경계 테스트 probe (데모 시스템의 동작 계약) ─────────────
 
 [[probe]]
@@ -134,19 +160,28 @@ id = "krx_session"
 description = "KRX 세션 판정"
 tz = "Asia/Seoul"
 default = "CLOSED"
-sample_dates = [2026-11-18]
+sample_dates = [2026-11-18, 2026-11-19]
 
   [[probe.window]]
   start = "09:00"
   end = "15:30"
   expect = "REGULAR"
+  exclude_dates = [2026-11-19]
   source = "KRX"
+
+  [[probe.window]]
+  start = "10:00"
+  end = "16:30"
+  expect = "REGULAR"
+  dates = [2026-11-19]
+  source = "CSAT_2026"
 
   [[probe.window]]
   start = "16:00"
   end = "20:00"
   expect = "AFTER"
   effective_from = 2026-09-14
+  exclude_dates = [2026-11-19]
   source = "E5"
 
 [[probe]]

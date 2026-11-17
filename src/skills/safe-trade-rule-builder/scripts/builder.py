@@ -19,7 +19,7 @@ from models import MarketDataProvider, MarketQuote, RuleDraft
 from parser_strategy import parse_intent
 from policy_engine import evaluate_policy
 from rule_json import parse_rule_payload
-from session_window import apply_time_window
+from session_window import allowed_market_states, apply_time_window
 from templates import runtime_files, runtime_handler_template
 
 
@@ -70,7 +70,7 @@ def build_rule(
             provider = get_provider(provider_name)
             quote = provider.get_quote(asset["symbol"], lookback_days=lookback_days)
             market_data = asdict(quote)
-            trigger_evaluation = evaluate_trigger(trigger, quote)
+            trigger_evaluation = evaluate_trigger(trigger, quote, allowed_states=allowed_market_states(time_window))
             # "장 마감 30분 전에만" 같은 시간 조건은 가격 조건과 별도로 종목 시장의 현지 시각으로 판정한다.
             trigger_evaluation = apply_time_window(trigger_evaluation, time_window, asset["symbol"], quote.timestamp)
         except Exception as exc:  # noqa: BLE001 - fail closed for market-data adapters

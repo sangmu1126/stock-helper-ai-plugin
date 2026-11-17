@@ -16,6 +16,7 @@ class RuntimeEvent:
     asset: dict[str, Any]
     order: dict[str, Any]
     cooldown: dict[str, Any]
+    time_window: dict[str, Any]
     action: Any
     execution_mode: Any
     broker_snapshot: dict[str, Any]
@@ -37,6 +38,7 @@ class RuntimeEvent:
             asset=_normalize_asset(event.get("asset") or rule.get("asset") or {"symbol": quote.get("symbol", "UNKNOWN")}),
             order=_as_dict(rule.get("order")),
             cooldown=_as_dict(rule.get("cooldown")),
+            time_window=_as_dict(rule.get("time_window")),
             action=rule.get("action"),
             execution_mode=rule.get("execution_mode"),
             broker_snapshot=EventBrokerProvider(_as_dict(event.get("broker_health"))).get_health().to_dict(),

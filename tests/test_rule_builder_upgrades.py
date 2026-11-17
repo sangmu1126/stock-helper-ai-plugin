@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import json
 import sys
+import tomllib
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
-import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "src" / "skills" / "safe-trade-rule-builder" / "scripts"
@@ -40,8 +40,8 @@ def kst(*args):
     ({"exclude_open_minutes": 10}, kst(2026, 11, 18, 9, 10), "OK", "TIME_WINDOW_SATISFIED"),
     ({"exclude_morning": True}, kst(2026, 11, 18, 11, 59), "WAIT", "MORNING_EXCLUDED"),
     ({"exclude_morning": True}, kst(2026, 11, 18, 12, 0), "OK", "TIME_WINDOW_SATISFIED"),
-    ({"only_before_close_minutes": 30}, kst(2026, 11, 18, 15, 30), "WAIT", "OUTSIDE_REGULAR_SESSION"),
-    ({"only_before_close_minutes": 30}, kst(2026, 11, 21, 15, 10), "WAIT", "OUTSIDE_REGULAR_SESSION"),  # 토요일
+    ({"only_before_close_minutes": 30}, kst(2026, 11, 18, 15, 30), "WAIT", "OUTSIDE_SESSION"),
+    ({"only_before_close_minutes": 30}, kst(2026, 11, 21, 15, 10), "WAIT", "OUTSIDE_SESSION"),  # 토요일
     ({"requires_consecutive_days": 3}, kst(2026, 11, 18, 10, 0), "WAIT", "CONSECUTIVE_DAYS_NOT_VERIFIED"),
 ])
 def test_krx_time_window(window, at, status, reason):
@@ -96,15 +96,92 @@ def test_build_rule_applies_time_window(monkeypatch):
 
 
 def test_sessions_match_market_hours_guard_calendar():
-    """룰 빌더와 거래시간 점검기가 같은 정규장 기준을 쓰는지 확인한다."""
-    sessions = load_sessions()["markets"]
+    """로컬 런타임의 세션 설정과 거래시간 점검기 기준표가 같은 값을 쓰는지 확인한다."""
+    markets = load_sessions()["markets"]
     calendar_path = ROOT / "src" / "skills" / "market-hours-guard" / "assets" / "calendar.demo.toml"
     boundaries = {b["id"]: b for b in tomllib.loads(calendar_path.read_text(encoding="utf-8"))["boundary"]}
-    assert sessions["KRX"]["open"] == boundaries["KRX_REGULAR_OPEN"]["time"]
-    assert sessions["KRX"]["close"] == boundaries["KRX_REGULAR_CLOSE"]["time"]
-    assert sessions["US"]["open"] == boundaries["US_REGULAR_OPEN"]["time"]
-    assert sessions["US"]["close"] == boundaries["US_REGULAR_CLOSE"]["time"]
-    assert sessions["US"]["tz"] == boundaries["US_REGULAR_OPEN"]["tz"]
+    krx, us = markets["KRX"], markets["US"]
+    assert krx["sessions"]["regular"]["open"] == boundaries["KRX_REGULAR_OPEN"]["time"]
+    assert krx["sessions"]["regular"]["close"] == boundaries["KRX_REGULAR_CLOSE"]["time"]
+    assert krx["sessions"]["after_hours"]["open"] == boundaries["KRX_AFTER_OPEN"]["time"]
+    assert krx["sessions"]["after_hours"]["close"] == boundaries["KRX_AFTER_CLOSE"]["time"]
+    csat = next(s for s in krx["special_days"] if s["id"] == "CSAT_2026")
+    assert csat["sessions"]["regular"]["open"] == boundaries["KRX_REGULAR_OPEN_CSAT_2026"]["time"]
+    assert csat["sessions"]["regular"]["close"] == boundaries["KRX_REGULAR_CLOSE_CSAT_2026"]["time"]
+    assert krx["morning_end"] == boundaries["MORNING_END"]["time"]
+    assert us["sessions"]["regular"]["open"] == boundaries["US_REGULAR_OPEN"]["time"]
+    assert us["sessions"]["regular"]["close"] == boundaries["US_REGULAR_CLOSE"]["time"]
+    assert us["tz"] == boundaries["US_REGULAR_OPEN"]["tz"]
+
+
+# ── 애프터마켓·특수일 ─────────────────────────────────────
+
+
+@pytest.mark.parametrize("window, at, status, reason", [
+    ({"market_session": "after_hours"}, kst(2026, 11, 18, 16, 30), "OK", "TIME_WINDOW_SATISFIED"),
+    ({"market_session": "after_hours"}, kst(2026, 11, 18, 15, 45), "WAIT", "OUTSIDE_SESSION"),
+    ({"market_session": "after_hours", "only_before_close_minutes": 30}, kst(2026, 11, 18, 19, 40), "OK", "TIME_WINDOW_SATISFIED"),
+    ({"market_session": "after_hours", "only_before_close_minutes": 30}, kst(2026, 11, 18, 19, 0), "WAIT", "BEFORE_CLOSING_WINDOW"),
+    ({"market_session": "after_hours"}, kst(2026, 9, 11, 16, 30), "WAIT", "SESSION_NOT_AVAILABLE"),  # 개장 전
+    ({"market_session": "pre_market"}, kst(2026, 11, 18, 8, 30), "WAIT", "SESSION_NOT_AVAILABLE"),   # KRX 프리마켓 없음
+])
+def test_krx_after_hours_session(window, at, status, reason):
+    result = evaluate_time_window(window, "035720.KS", at)
+    assert (result["status"], result["reason"]) == (status, reason)
+
+
+def test_us_has_no_after_hours_session_configured():
+    result = evaluate_time_window({"market_session": "after_hours"}, "TSLA", kst(2026, 11, 19, 7, 0))
+    assert result["reason"] == "SESSION_NOT_AVAILABLE"
+
+
+@pytest.mark.parametrize("window, at, status, reason", [
+    ({"only_before_close_minutes": 30}, kst(2026, 11, 19, 15, 10), "WAIT", "BEFORE_CLOSING_WINDOW"),   # 평소면 통과할 시각
+    ({"only_before_close_minutes": 30}, kst(2026, 11, 19, 16, 10), "OK", "TIME_WINDOW_SATISFIED"),
+    ({"exclude_open_minutes": 10}, kst(2026, 11, 19, 9, 30), "WAIT", "OUTSIDE_SESSION"),               # 아직 개장 전
+    ({"exclude_open_minutes": 10}, kst(2026, 11, 19, 10, 5), "WAIT", "WITHIN_OPENING_EXCLUSION"),
+    ({"market_session": "after_hours"}, kst(2026, 11, 19, 17, 0), "WAIT", "SESSION_SCHEDULE_UNCONFIRMED"),
+])
+def test_suneung_day_shifts_regular_session(window, at, status, reason):
+    result = evaluate_time_window(window, "005930.KS", at)
+    assert (result["status"], result["reason"]) == (status, reason)
+    assert result["details"].get("special_day") == "2027학년도 수능일"
+
+
+@pytest.mark.parametrize("text, session", [
+    ("카카오 애프터마켓에서 3% 떨어지면 10만원만 매수", "after_hours"),
+    ("삼성전자 시간외에 2% 오르면 알려줘", "after_hours"),
+    ("카카오 프리마켓에서 3% 떨어지면 알려줘", "pre_market"),
+    ("카카오 3% 떨어지면 장 마감 30분 전에만 매수", "regular"),
+])
+def test_parser_detects_session(text, session):
+    from intent_parser import detect_time_window
+
+    assert detect_time_window(text)["market_session"] == session
+
+
+def test_runtime_handler_applies_time_window(monkeypatch):
+    """로컬 런타임도 룰의 시간 조건을 판정한다(B1)."""
+    import importlib.util
+
+    runtime = ROOT / "src" / "runtime"
+    monkeypatch.syspath_prepend(str(runtime))
+    for path in runtime.glob("*.py"):  # 같은 이름의 스킬 모듈이 캐시돼 있으면 런타임 모듈로 다시 읽게 한다
+        monkeypatch.delitem(sys.modules, path.stem, raising=False)
+    monkeypatch.setenv("SAFE_TRADE_METRICS_LOG", "0")
+    spec = importlib.util.spec_from_file_location("runtime_handler_b1", runtime / "runtime_handler.py")
+    handler = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(handler)
+    event = json.loads((runtime / "sample_events" / "matched_manual_confirm.json").read_text(encoding="utf-8"))
+    now = int(kst(2026, 11, 18, 10, 0).timestamp())
+    monkeypatch.setattr(handler.time, "time", lambda: now)
+    event["quote"].update(timestamp=now, age_seconds=0)
+
+    assert handler.handle_event(json.loads(json.dumps(event)))["decision"] == "MANUAL_CONFIRM"
+    event["rule"]["time_window"] = {"market_session": "regular", "only_before_close_minutes": 30}
+    held = handler.handle_event(json.loads(json.dumps(event)))
+    assert held["decision"] == "WAIT"
+    assert held["trigger_evaluation"]["reason"] == "TIME_WINDOW_BEFORE_CLOSING_WINDOW"
 
 
 # ── 종목 인식 ──────────────────────────────────────────────
@@ -127,7 +204,7 @@ def test_detect_asset(text, symbol):
     assert detect_asset(text)["symbol"] == symbol
 
 
-def test_llm_output_market_suffix_is_corrected():
+def test_rule_json_market_suffix_is_corrected():
     from normalizer import normalize_payload
 
     payload = {"asset": {"symbol": "086520.KS", "name": "에코프로"}}
@@ -156,6 +233,46 @@ def test_detect_amount(text, amount):
 
 
 def test_market_sessions_have_sources():
-    data = json.loads((ROOT / "src" / "skills" / "safe-trade-rule-builder" / "config" / "market_sessions.json").read_text(encoding="utf-8"))
+    data = json.loads((ROOT / "src" / "runtime" / "market_sessions.json").read_text(encoding="utf-8"))
     for market in data["markets"].values():
-        assert market["source"] in data["sources"]
+        for session in market["sessions"].values():
+            assert session["source"] in data["sources"]
+        for special in market["special_days"]:
+            assert special["source"] in data["sources"]
+    assert data["morning_source"] in data["sources"]
+
+
+# ── 달러 가격 조건 ─────────────────────────────────────────
+
+
+@pytest.mark.parametrize("text, kind, price, currency", [
+    ("테슬라 200달러 아래로 내려가면 알려줘", "price_cross_below", 200.0, "USD"),
+    ("애플 $180 넘으면 알려줘", "price_cross_above", 180.0, "USD"),
+    ("엔비디아 $1,050.5를 돌파하면 알려줘", "price_cross_above", 1050.5, "USD"),
+    ("TSLA 300불 이하로 떨어지면 1주 매수", "price_cross_below", 300.0, "USD"),
+    ("카카오가 4만원을 넘으면 알려줘", "price_cross_above", 40000.0, "KRW"),
+    ("035720 55000원 아래로 내려가면 알림만 줘", "price_cross_below", 55000.0, "KRW"),
+    ("카카오 10만원만 매수, 3% 이상 떨어지면", "price_drop_percent", None, None),  # 10만원은 주문 금액
+])
+def test_price_conditions_in_krw_and_usd(text, kind, price, currency):
+    from intent_parser import detect_trigger
+
+    trigger = detect_trigger(text)
+    assert trigger["type"] == kind
+    assert trigger.get("price") == price
+    assert (trigger.get("currency") if price else None) == currency
+
+
+def test_price_level_is_not_an_order_amount():
+    assert detect_amount_krw("카카오가 4만원을 넘으면 알려줘") is None
+    assert detect_amount_krw("카카오 4만원 아래로 내려가면 20만원어치 매수") == 200_000
+
+
+def test_currency_mismatch_stops_price_trigger():
+    from evaluation import evaluate_trigger_fields
+
+    usd_quote = {"regular_market_price": 190.0, "currency": "USD"}
+    krw_rule = {"type": "price_cross_below", "price": 200000.0, "currency": "KRW"}
+    usd_rule = {"type": "price_cross_below", "price": 200.0, "currency": "USD"}
+    assert evaluate_trigger_fields(krw_rule, usd_quote)["reason"] == "TRIGGER_CURRENCY_MISMATCH"
+    assert evaluate_trigger_fields(usd_rule, usd_quote)["status"] == "MATCHED"

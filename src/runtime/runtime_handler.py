@@ -23,6 +23,7 @@ import decision_engine as _DECISION
 import decision_log as _DECISION_LOG
 import error_taxonomy as _ERRORS
 import event_context as _EVENT_CONTEXT
+import market_sessions as _SESSIONS
 import observability as _OBSERVABILITY
 import policy_engine as _POLICY
 import prompt_security as _PROMPT_SECURITY
@@ -95,11 +96,19 @@ def _handle_event(event: dict[str, Any]) -> dict[str, Any]:
         now=now,
         risk_result=risk_result,
         prompt_security_result=prompt_security_result,
+        allowed_exchange_states=_SESSIONS.allowed_market_states(runtime_event.time_window),
     )
     if precheck_stops:
         trigger_result = {"status": "STOP", "reason": precheck_stops}
     else:
         trigger_result = evaluate_trigger(runtime_event.trigger, runtime_event.quote)
+        # 세션(정규장·애프터마켓)과 "장 마감 30분 전에만" 같은 시간 조건을 종목 시장의 현지 시각으로 판정한다.
+        trigger_result = _SESSIONS.apply_time_window(
+            trigger_result,
+            runtime_event.time_window,
+            str(runtime_event.asset.get("symbol", "")),
+            runtime_event.quote.get("timestamp"),
+        )
     trigger_result = _with_quote_snapshot(trigger_result, runtime_event.quote)
 
     decision_result_dict = _DECISION.DecisionEngine(state_store=state_store).decide(
@@ -215,6 +224,7 @@ def _precheck_stops(
     now: int,
     risk_result: dict[str, Any],
     prompt_security_result: Any | None = None,
+    allowed_exchange_states: frozenset[str] | set[str] = frozenset(OPEN_MARKET_STATES),
 ) -> list[str]:
     stops: list[str] = []
     prompt_security = prompt_security_result or _PROMPT_SECURITY.inspect_user_intent(intent)
@@ -222,7 +232,7 @@ def _precheck_stops(
         stops.extend(reason for reason in prompt_security.reasons if reason not in stops)
     if not broker.get("ok"):
         stops.append("BROKER_HEALTHCHECK_FAILED")
-    if exchange.get("status") not in OPEN_MARKET_STATES:
+    if exchange.get("status") not in allowed_exchange_states:
         stops.append("EXCHANGE_NOT_OPEN")
     age_status = quote_age_status(quote, now)
     if not age_status["ok"]:

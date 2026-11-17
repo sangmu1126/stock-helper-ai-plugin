@@ -8,12 +8,11 @@ from __future__ import annotations
 
 import hashlib
 import itertools
+import tomllib
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from pathlib import Path
 from typing import Any
-
-import tomllib
 
 from .timeutil import fmt_time, get_tz, is_weekday, parse_time
 
@@ -62,11 +61,24 @@ class Window:
     source: str
     effective_from: date | None = None
     effective_to: date | None = None
+    dates: tuple[date, ...] = ()          # 이 날짜에만 적용 (특수일 일정)
+    exclude_dates: tuple[date, ...] = ()  # 이 날짜에는 적용 안 함 (특수일에 바뀌는 평소 일정)
 
     def applies(self, day: date) -> bool:
         started = self.effective_from is None or day >= self.effective_from
         not_ended = self.effective_to is None or day <= self.effective_to
-        return started and not_ended
+        listed = not self.dates or day in self.dates
+        return started and not_ended and listed and day not in self.exclude_dates
+
+
+@dataclass(frozen=True)
+class SpecialDay:
+    """거래소가 거래시간을 바꾼 날(예: 수능일). confirmed_until 이후는 공지가 없어 경계 테스트에서 뺀다."""
+
+    date: date
+    name: str
+    source: str
+    confirmed_until: time | None = None
 
 
 @dataclass(frozen=True)
@@ -92,6 +104,10 @@ class Calendar:
     context_keywords: tuple[str, ...]
     sources: dict[str, str]
     digest: str
+    special_days: tuple[SpecialDay, ...] = ()
+
+    def special_day(self, day: date) -> SpecialDay | None:
+        return next((s for s in self.special_days if s.date == day), None)
 
     @property
     def active(self) -> tuple[Boundary, ...]:
@@ -135,6 +151,15 @@ def _as_date(value: Any, where: str, problems: list[str]) -> date | None:
     except ValueError:
         problems.append(f"{where}: 날짜 형식이 아닙니다 ({value!r})")
         return None
+
+
+def _date_list(values: Any, where: str, problems: list[str]) -> tuple[date, ...]:
+    if values is None:
+        return ()
+    if not isinstance(values, list):
+        problems.append(f"{where}: 날짜 목록이어야 합니다")
+        return ()
+    return tuple(d for d in (_as_date(v, where, problems) for v in values) if d is not None)
 
 
 def _as_time(value: Any, where: str, problems: list[str]) -> time | None:
@@ -228,6 +253,8 @@ def _probe(item: dict, local_tz: str, sources: dict[str, str], where: str,
                 start=start, end=end, expect=raw.get("expect"), source=source,
                 effective_from=_as_date(raw.get("effective_from"), f"{w_where}.effective_from", problems),
                 effective_to=_as_date(raw.get("effective_to"), f"{w_where}.effective_to", problems),
+                dates=_date_list(raw.get("dates"), f"{w_where}.dates", problems),
+                exclude_dates=_date_list(raw.get("exclude_dates"), f"{w_where}.exclude_dates", problems),
             ))
     sample_dates = [
         d for d in (_as_date(v, f"{where}.sample_dates", problems) for v in item.get("sample_dates", []))
@@ -297,6 +324,17 @@ def load_calendar(path: str | Path) -> Calendar:
     for dup in {i for i in probe_ids if probe_ids.count(i) > 1}:
         problems.append(f"probe id 중복: {dup}")
 
+    special_days: list[SpecialDay] = []
+    for i, raw in enumerate(data.get("special_day", [])):
+        where = f"special_day[{i}]"
+        day = _as_date(raw.get("date"), f"{where}.date", problems)
+        source = _check_source(raw, where, sources, problems)
+        until = _as_time(raw["confirmed_until"], f"{where}.confirmed_until", problems) if raw.get("confirmed_until") else None
+        if not str(raw.get("name", "")).strip():
+            problems.append(f"{where}: name이 없습니다")
+        if day:
+            special_days.append(SpecialDay(date=day, name=str(raw.get("name", "")), source=source, confirmed_until=until))
+
     scan = data.get("scan", {})
     extra = scan.get("context_keywords", [])
     if not isinstance(extra, list) or not all(isinstance(k, str) for k in extra):
@@ -319,4 +357,5 @@ def load_calendar(path: str | Path) -> Calendar:
         )),
         sources=sources,
         digest="sha256:" + hashlib.sha256(raw_bytes).hexdigest()[:16],
+        special_days=tuple(special_days),
     )
