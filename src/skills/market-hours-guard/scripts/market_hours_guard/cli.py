@@ -10,6 +10,7 @@ from pathlib import Path
 from . import __version__
 from .calendar_model import CalendarError, load_calendar
 from .classify import STATUS_ORDER
+from .junit import write_junit_tests
 from .report import render_markdown
 from .scan import scan_repo
 from .testgen import write_tests
@@ -78,8 +79,11 @@ def _cmd_scan(args) -> int:
 
 def _cmd_gen(args) -> int:
     cal = load_calendar(args.calendar)
-    info = write_tests(cal, Path(args.out))
-    print(f"[mhg] 경계 테스트 {info['cases']}건 생성 (probe: {', '.join(info['probes'])})")
+    if args.format == "junit":
+        info = write_junit_tests(cal, Path(args.out), package=args.java_package)
+    else:
+        info = write_tests(cal, Path(args.out))
+    print(f"[mhg] 경계 테스트 {info['cases']}건 생성 ({args.format}, probe: {', '.join(info['probes'])})")
     for path in info["files"]:
         print(f"  - {path}")
     state = "새로 만듦 — PROBES를 저장소 함수에 연결하세요" if info["adapter_created"] else "기존 파일 유지"
@@ -108,7 +112,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     gen = sub.add_parser("gen-tests", help="기준표 probe에서 경계 시각 테스트 생성")
     gen.add_argument("--calendar", required=True)
-    gen.add_argument("--out", required=True, help="테스트를 쓸 디렉터리 (예: <repo>/tests/market_hours)")
+    gen.add_argument("--out", required=True, help="테스트를 쓸 디렉터리 (예: <repo>/tests/market_hours, <repo>/src/test/java/...)")
+    gen.add_argument("--format", choices=["pytest", "junit"], default="pytest",
+                     help="pytest(기본) 또는 junit(Java·Kotlin 저장소, JUnit 5)")
+    gen.add_argument("--java-package", help="junit: 생성할 클래스의 패키지 (예: com.example.trading)")
     gen.set_defaults(func=_cmd_gen)
     return parser
 

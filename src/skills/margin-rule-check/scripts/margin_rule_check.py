@@ -23,10 +23,12 @@ from typing import Any
 _SKILLS_DIR = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_SKILLS_DIR / "safe-trade-rule-builder" / "scripts"))
 
+from docx_text import DocxError, read_docx_text
 from margin_guard import add_business_days, classify_ratio, evaluate_grace, exchange_holidays, load_margin_rules
+from mrc_junit import write_junit_tests
 
 SUFFIXES = {".md", ".txt", ".html", ".json", ".yaml", ".yml", ".properties", ".toml", ".py", ".kt", ".java",
-            ".ts", ".tsx", ".js", ".csv"}
+            ".ts", ".tsx", ".js", ".csv", ".docx"}
 SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build", "mrc-output"}
 GENERATED_MARKER = "mrc:generated"
 COLLATERAL_WORDS = ("담보", "반대매매", "collateral", "margin", "신용", "유예", "liquidation", "maintenance", "grace")
@@ -200,10 +202,19 @@ def lint_repo(repo: Path, rules: dict[str, Any], exclude: tuple[Path, ...] = ())
             parent.resolve() in excluded for parent in file.parents
         ):
             continue
-        text = file.read_text(encoding="utf-8", errors="replace")
+        rel = file.relative_to(repo).as_posix()
+        if file.suffix.lower() == ".docx":
+            try:
+                text = read_docx_text(file)
+            except DocxError as exc:
+                findings.append(_finding(rel, 0, "docx", "REVIEW", "", None, None,
+                                         f"{exc} — 내용을 직접 확인하세요", ""))
+                continue
+        else:
+            text = file.read_text(encoding="utf-8", errors="replace")
         if GENERATED_MARKER in text[:300]:
             continue
-        findings.extend(lint_text(file.relative_to(repo).as_posix(), text, rules))
+        findings.extend(lint_text(rel, text, rules))
     order = ["MISCONCEPTION", "MISMATCH", "REVIEW", "OK"]
     findings.sort(key=lambda f: (order.index(f.status), f.path, f.line))
     return findings
@@ -218,6 +229,8 @@ def render_report(repo: Path, findings: list[Finding], rules: dict[str, Any]) ->
         "- " + " · ".join(f"{k} {v}" for k, v in counts.items()),
         "",
     ]
+    if any(f.path.lower().endswith(".docx") for f in findings):
+        lines[-1:-1] = ["- Word(.docx) 파일의 위치는 `파일:문단 번호`입니다."]
     for title, statuses in (("고쳐야 할 안내·설정", ("MISCONCEPTION", "MISMATCH")), ("확인 필요", ("REVIEW",))):
         items = [f for f in findings if f.status in statuses]
         lines += [f"## {title} ({len(items)})", ""]
@@ -341,13 +354,19 @@ def main(argv: list[str] | None = None) -> int:
     lint.add_argument("--out", default="mrc-output")
     gen = sub.add_parser("gen-tests", help="계산 로직용 경계 테스트 생성")
     gen.add_argument("--out", required=True)
+    gen.add_argument("--format", choices=["pytest", "junit"], default="pytest",
+                     help="pytest(기본) 또는 junit(Java·Kotlin 계산 코드, JUnit 5)")
+    gen.add_argument("--java-package", help="junit: 생성할 클래스의 패키지 (예: com.example.margin)")
     args = parser.parse_args(argv)
     rules = load_margin_rules()
 
     if args.command == "gen-tests":
-        info = write_tests(rules, Path(args.out))
+        if args.format == "junit":
+            info = write_junit_tests(build_cases(rules), rules["version"], Path(args.out), package=args.java_package)
+        else:
+            info = write_tests(rules, Path(args.out))
         state = "새로 만듦 — 회사 계산 함수를 연결하세요" if info["adapter_created"] else "기존 파일 유지"
-        print(f"[mrc] 경계 테스트 {info['cases']}건 생성 · 어댑터 {info['adapter']} ({state})")
+        print(f"[mrc] 경계 테스트 {info['cases']}건 생성({args.format}) · 어댑터 {info['adapter']} ({state})")
         return 0
 
     repo = Path(args.repo)

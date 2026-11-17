@@ -1,0 +1,7 @@
+batch:
+  sor-settlement:
+    description: "SOR 체결 정산 — SOR 종료 5분 뒤 실행"
+    cron: "0 5 20 * * MON-FRI"  # mhg: SOR_END+5m
+  daily-report:
+    description: "일일 운영 리포트"
+    cron: "0 0 7 * * *"

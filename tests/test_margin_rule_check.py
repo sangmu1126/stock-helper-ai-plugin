@@ -110,3 +110,95 @@ def test_generated_logic_tests_against_examples(tmp_path, folder, ok, summary):
     proc = _run("-m", "pytest", "-q", "-p", "no:cacheprovider", "tests", cwd=target)
     assert (proc.returncode == 0) is ok, proc.stdout
     assert summary in proc.stdout
+
+
+# ── JUnit 5 출력 (Java·Kotlin 계산 코드) ─────────────────────
+
+from docx_text import DocxError, read_docx_text  # noqa: E402
+from java_junit import COPY_IGNORE, require_junit, run_junit  # noqa: E402
+from mrc_junit import ADAPTER_CLASS, TEST_CLASS, write_junit_tests  # noqa: E402
+
+
+def test_junit_files_are_ascii_and_cover_every_case(tmp_path):
+    cases = build_cases(RULES)
+    info = write_junit_tests(cases, RULES["version"], tmp_path, package="com.example.margin")
+    text = (tmp_path / f"{TEST_CLASS}.java").read_bytes().decode("ascii")
+    assert text.startswith("// mrc:generated") and "package com.example.margin;" in text
+    assert text.count("Arguments.of(") == info["cases"] == len(cases) == 21
+    assert 'Arguments.of("classify-139.9", 139.9, "SHORTFALL"' in text
+    assert '"liquidation-shortfall-2026-12-30", "SHORTFALL", "2026-12-30", "2027-01-05"' in text
+    assert 'Arguments.of("grace-135-None-2026-11-19", 135.0, null, "2026-11-19", "NEEDS_ROUND"' in text
+    adapter = tmp_path / f"{ADAPTER_CLASS}.java"
+    assert "classifyRatio = null;" in adapter.read_text(encoding="ascii")
+    adapter.write_text("// connected\n", encoding="utf-8")
+    assert not write_junit_tests(cases, RULES["version"], tmp_path)["adapter_created"]
+    assert adapter.read_text(encoding="utf-8") == "// connected\n"
+
+
+def test_cli_gen_tests_junit(tmp_path):
+    proc = _run(SCRIPT, "gen-tests", "--out", tmp_path, "--format", "junit", "--java-package", "toymargin")
+    assert proc.returncode == 0, proc.stderr
+    assert "21건 생성(junit)" in proc.stdout
+    assert "package toymargin;" in (tmp_path / f"{TEST_CLASS}.java").read_text(encoding="ascii")
+
+
+@pytest.mark.parametrize("folder, code, counts", [
+    ("toy-margin-service-java", 1, {"found": 21, "successful": 12, "failed": 9}),
+    ("toy-margin-service-java-fixed", 0, {"found": 21, "successful": 21, "failed": 0}),
+])
+def test_generated_junit_tests_run_against_java_examples(tmp_path, folder, code, counts):
+    require_junit()
+    target = tmp_path / folder
+    shutil.copytree(SKILL / "examples" / folder, target, ignore=COPY_IGNORE)
+    assert _run(SCRIPT, "gen-tests", "--out", target / "src" / "test" / "java" / "toymargin",
+                "--format", "junit", "--java-package", "toymargin").returncode == 0
+    assert run_junit(target) == (code, counts)
+
+
+# ── Word(.docx) 상담 스크립트 ───────────────────────────────
+
+_W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+
+
+def _docx(path: Path, body: str) -> Path:
+    import zipfile
+
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("[Content_Types].xml",
+                         '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/'
+                         'package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/>'
+                         '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-'
+                         'officedocument.wordprocessingml.document.main+xml"/></Types>')
+        archive.writestr("word/document.xml",
+                         f'<?xml version="1.0" encoding="UTF-8"?><w:document {_W}><w:body>{body}</w:body></w:document>')
+    return path
+
+
+def _p(*runs: str) -> str:
+    return "<w:p>" + "".join(f"<w:r><w:t xml:space=\"preserve\">{r}</w:t></w:r>" for r in runs) + "</w:p>"
+
+
+def test_docx_paragraphs_runs_and_tables_are_read(tmp_path):
+    body = (_p("상담 스크립트")
+            + _p("담보비율이 ", "120", "% 이상이면 반대매매는 되지 않습니다.")  # Word는 한 문장을 여러 run으로 나눈다
+            + "<w:tbl><w:tr><w:tc>" + _p("담보유지비율은 140%입니다.") + "</w:tc></w:tr></w:tbl>")
+    path = _docx(tmp_path / "script.docx", body)
+    assert read_docx_text(path).split("\n") == [
+        "상담 스크립트", "담보비율이 120% 이상이면 반대매매는 되지 않습니다.", "담보유지비율은 140%입니다."]
+
+
+def test_lint_reads_docx_and_reports_paragraph_numbers(tmp_path):
+    _docx(tmp_path / "script.docx", _p("안내") + _p("담보비율이 ", "120", "% 이상이면 반대매매는 되지 않습니다."))
+    findings = lint_repo(tmp_path, RULES)
+    assert [(f.status, f.path, f.line, f.found) for f in findings] == [("MISCONCEPTION", "script.docx", 2, "120%")]
+    proc = _run(SCRIPT, "lint", "--repo", tmp_path, "--out", tmp_path / "out")
+    assert proc.returncode == 1
+    assert "문단 번호" in (tmp_path / "out" / "report.md").read_text(encoding="utf-8")
+
+
+def test_unreadable_docx_is_flagged_for_review(tmp_path):
+    (tmp_path / "broken.docx").write_bytes(b"not a zip")
+    findings = lint_repo(tmp_path, RULES)
+    assert [(f.status, f.path, f.kind) for f in findings] == [("REVIEW", "broken.docx", "docx")]
+    with pytest.raises(DocxError):
+        read_docx_text(tmp_path / "broken.docx")

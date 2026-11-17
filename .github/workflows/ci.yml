@@ -24,10 +24,25 @@ jobs:
         if [ -f src/requirements.txt ]; then pip install -r src/requirements.txt; fi
         pip install pytest ruff
 
+    - name: Set up Java (generated JUnit 5 tests)
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: "21"
+
+    - name: Download JUnit console launcher
+      run: |
+        JAR="$RUNNER_TEMP/junit-platform-console-standalone-1.11.4.jar"
+        curl -sSfL -o "$JAR" https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.11.4/junit-platform-console-standalone-1.11.4.jar
+        echo "b016ef6b1c3454d6d7c2c88ce081dabf289699686af6622d6e4e2e1b54b4a2fc  $JAR" | sha256sum -c -
+        echo "JUNIT_CONSOLE_JAR=$JAR" >> "$GITHUB_ENV"
+
     - name: Lint with ruff
       run: |
         ruff check src tests tools --output-format github
 
     - name: Test with pytest
+      env:
+        REQUIRE_JUNIT: "1"
       run: |
         pytest -v
