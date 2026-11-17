@@ -99,6 +99,7 @@ market = "KRX"
 time = "10:00"
 meaning = "수능일(2026-11-19) KRX 정규장 시작 — 평소보다 1시간 늦음"
 keywords = ["csat", "수능", "special"]
+requires_keyword = true  # 흔한 시각(10:00 등)과 겹치므로 수능일 문맥이 있을 때만 MATCH
 source = "CSAT_2026"
 
 [[boundary]]
@@ -107,6 +108,7 @@ market = "KRX"
 time = "16:30"
 meaning = "수능일(2026-11-19) KRX 정규장 마감 — 평소보다 1시간 늦음"
 keywords = ["csat", "수능", "special"]
+requires_keyword = true  # 흔한 시각(10:00 등)과 겹치므로 수능일 문맥이 있을 때만 MATCH
 source = "CSAT_2026"
 
 [[boundary]]
@@ -115,6 +117,7 @@ market = "KRX"
 time = "17:00"
 meaning = "수능일(2026-11-19) KRX 애프터마켓 시작 — 평소보다 1시간 늦음 (종료 20:00은 평소와 같음)"
 keywords = ["csat", "수능", "special"]
+requires_keyword = true  # 흔한 시각(10:00 등)과 겹치므로 수능일 문맥이 있을 때만 MATCH
 source = "CSAT_2026"
 
 [[boundary]]

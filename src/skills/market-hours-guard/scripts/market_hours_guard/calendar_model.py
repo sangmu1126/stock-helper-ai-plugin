@@ -47,6 +47,8 @@ class Boundary:
     replaced_by: str | None = None
     retired_on: date | None = None
     effective_from: date | None = None
+    # 특수일 값처럼 흔한 시각과 겹치는 기준: 문맥에 이 기준의 키워드가 있을 때만 MATCH로 본다.
+    requires_keyword: bool = False
 
     @property
     def label(self) -> str:
@@ -239,6 +241,7 @@ def _boundary(item: dict, retired: bool, local_tz: str, sources: dict[str, str],
         replaced_by=str(replaced_by) if replaced_by else None,
         retired_on=_as_date(item.get("retired_on"), f"{where}.retired_on", problems),
         effective_from=_as_date(item.get("effective_from"), f"{where}.effective_from", problems),
+        requires_keyword=bool(item.get("requires_keyword", False)),
     )
 
 

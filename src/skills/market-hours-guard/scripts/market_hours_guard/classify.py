@@ -161,8 +161,11 @@ def classify(occ: Occurrence, cal: Calendar) -> Finding | None:
 
     t = occ.time
     local = cal.local_tz
-    active = [b for b in cal.active if (b.tz == local and b.time == t)
-              or (b.tz != local and b.time == t and keyword_hits(b.keywords, occ))]
+    # requires_keyword 기준(예: 수능일 10:00)은 그 기준의 단어가 문맥에 있을 때만 후보로 본다.
+    same_value = [b for b in cal.active if b.time == t]
+    active = [b for b in same_value
+              if (b.tz == local and not b.requires_keyword) or keyword_hits(b.keywords, occ)]
+    keyword_only = [b for b in same_value if b.tz == local and b.requires_keyword and b not in active]
     retired = [b for b in cal.retired if b.time == t]
     foreign_local: list[tuple[Boundary, str]] = [
         (b, season) for b in cal.active if b.tz != local and keyword_hits(b.keywords, occ)
@@ -223,6 +226,12 @@ def classify(occ: Occurrence, cal: Calendar) -> Finding | None:
         note = "" if len(active) == 1 else f" (같은 값의 기준 {len(active)}개: {', '.join(b.id for b in active)})"
         return _finding(occ, "MATCH", f"{a.meaning} — 의미 키워드 없음{note}",
                         "의미를 고정하려면 `mhg: <ID>` 주석을 다세요.", boundary=a, expected=fmt_time(a.time),
+                        evidence=market_hits)
+    if keyword_only:
+        b = keyword_only[0]
+        return _finding(occ, "UNMAPPED",
+                        f"{b.label}({b.meaning})과 값은 같지만 그 문맥({', '.join(b.keywords[:3])})이 없어 기준값으로 보지 않았습니다",
+                        f"그 기준이 맞다면 `mhg: {b.id}` 주석을 달고, 다른 시장·업무의 시각이면 `mhg: ignore`로 표시하세요.",
                         evidence=market_hits)
     return _finding(occ, "UNMAPPED", f"거래시간 문맥({', '.join(market_hits[:4])})이지만 기준표에 없는 시각입니다",
                     "다른 기준에서 파생된 값이면 `mhg: <ID>+5m`처럼, 무관하면 `mhg: ignore`로 표시하세요. "
