@@ -1,4 +1,4 @@
-"""명령줄 진입점: check-calendar / scan / gen-tests."""
+"""명령줄 진입점: check-calendar / scan / gen-tests / impact."""
 
 from __future__ import annotations
 
@@ -10,6 +10,8 @@ from pathlib import Path
 from . import __version__
 from .calendar_model import CalendarError, load_calendar
 from .classify import STATUS_ORDER
+from .impact import new_failures, render_impact, run_impact
+from .impact import to_json as impact_json
 from .junit import write_junit_tests
 from .report import render_markdown
 from .sarif import to_sarif
@@ -97,6 +99,29 @@ def _cmd_gen(args) -> int:
     return EXIT_OK
 
 
+def _cmd_impact(args) -> int:
+    old, new = load_calendar(args.calendar), load_calendar(args.new_calendar)
+    repo = Path(args.repo)
+    if not repo.is_dir():
+        print(f"저장소 경로가 없습니다: {repo}", file=sys.stderr)
+        return EXIT_INPUT
+    out = Path(args.out)
+    diff, changes, _ = run_impact(repo, old, new, include_docs=args.include_docs, exclude=(out,))
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "impact.md").write_text(render_impact(repo, old, new, diff, changes, args.fail_on), encoding="utf-8")
+    (out / "impact.json").write_text(json.dumps(impact_json(diff, changes), ensure_ascii=False, indent=2) + "\n",
+                                     encoding="utf-8")
+    failing = new_failures(changes, args.fail_on)
+    print(f"[mhg] 기준표 변경 {len(diff)}건 → {repo.name}에서 판정이 바뀌는 곳 {len(changes)}개, "
+          f"새로 실패 조건이 되는 곳 {len(failing)}개")
+    for line in diff:
+        print(f"  기준표  {line}")
+    for c in changes:
+        print(f"  {c.transition:<22} {c.path}:{c.line}  {c.found}")
+    print(f"[mhg] 보고서: {out / 'impact.md'}")
+    return EXIT_FINDINGS if failing else EXIT_OK
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="mhg", description="거래시간 변경 점검기 (Market Hours Guard)")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -126,6 +151,15 @@ def build_parser() -> argparse.ArgumentParser:
     gen.add_argument("--java-package", help="junit: 생성할 클래스의 패키지 (예: com.example.trading)")
     gen.set_defaults(func=_cmd_gen)
 
+    impact = sub.add_parser("impact", help="새 기준표를 적용하면 판정이 바뀌는 곳 미리보기 (코드는 안 바꿈)")
+    impact.add_argument("--repo", required=True)
+    impact.add_argument("--calendar", required=True, help="현재 기준표")
+    impact.add_argument("--new-calendar", required=True, help="바꾸려는 기준표")
+    impact.add_argument("--out", default="mhg-output/impact")
+    impact.add_argument("--include-docs", action="store_true", help=".md/.txt/.html 문서도 검사")
+    impact.add_argument("--fail-on", type=_statuses, default=_statuses("MISMATCH,STALE,DST_RISK"),
+                        help="새로 생기면 종료 코드 1로 알릴 상태 (기본: MISMATCH,STALE,DST_RISK)")
+    impact.set_defaults(func=_cmd_impact)
     return parser
 
 
