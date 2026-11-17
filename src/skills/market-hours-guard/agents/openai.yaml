@@ -1,0 +1,4 @@
+interface:
+  display_name: "Market Hours Guard"
+  short_description: "거래시간 제도 변경 누락을 찾고 경계 테스트로 확인"
+  default_prompt: "Use $market-hours-guard to check that the latest trading-hours change is applied across this repository."

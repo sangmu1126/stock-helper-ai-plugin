@@ -1,0 +1,7 @@
+jobs:
+  sor-settlement:
+    description: "SOR 체결 정산 — SOR 종료 직후 실행"
+    cron: "35 15 * * 1-5"
+  daily-report:
+    description: "일일 운영 리포트"
+    cron: "0 7 * * *"

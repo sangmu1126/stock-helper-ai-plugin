@@ -1,0 +1,178 @@
+# 거래시간 기준표 — 데모
+#
+# 공개 보도로 확인한 값(E5·E6·E7, KRX, NYSE)과 데모 시스템 가정(DEMO)을 source로 구분한다.
+# 실제 사용 전에는 회사 담당자가 승인한 기준으로 교체해야 한다. 이 파일의 값이 회사 내부 규칙이라는 뜻은 아니다.
+
+[meta]
+name = "거래시간 기준표 (데모)"
+local_tz = "Asia/Seoul"
+basis_date = 2026-11-18
+
+[sources]
+KRX = "한국거래소 정규시장 09:00~15:30 (머니투데이 2026-09-13 기사에도 기재)"
+E5 = "머니투데이 2026-09-13: KRX 애프터마켓 2026-09-14 개장, 16:00~20:00"
+E6 = "MTN 2026-09-14: 애프터마켓 개장으로 SOR 적용 시간이 15:30에서 20:00까지로 연장"
+E7 = "스페셜타임즈 2026-09-14: NXT 프리마켓 08:00~08:50 운영 중 장애"
+NYSE = "미국 정규장 09:30~16:00 (America/New_York, 서머타임은 시간대 규칙으로 처리)"
+DEMO = "데모 시스템 가정 — 실제 회사 규칙이 아님"
+
+[scan]
+# 기본 어휘(market, order, 주문, 체결 등)에 더해 거래시간 문맥으로 볼 단어
+context_keywords = ["mts", "hts", "exchange", "거래소"]
+
+# ── 현행 경계 ─────────────────────────────────────────────
+
+[[boundary]]
+id = "KRX_REGULAR_OPEN"
+market = "KRX"
+time = "09:00"
+meaning = "KRX 정규장 시작"
+keywords = ["krx", "kospi", "kosdaq", "regular", "정규"]
+source = "KRX"
+
+[[boundary]]
+id = "KRX_REGULAR_CLOSE"
+market = "KRX"
+time = "15:30"
+meaning = "KRX 정규장 마감"
+keywords = ["krx", "kospi", "kosdaq", "regular", "close", "정규", "마감"]
+source = "KRX"
+
+[[boundary]]
+id = "KRX_AFTER_OPEN"
+market = "KRX"
+time = "16:00"
+meaning = "KRX 애프터마켓 시작"
+keywords = ["after", "aftermarket", "애프터"]
+effective_from = 2026-09-14
+source = "E5"
+
+[[boundary]]
+id = "KRX_AFTER_CLOSE"
+market = "KRX"
+time = "20:00"
+meaning = "KRX 애프터마켓 종료"
+keywords = ["after", "aftermarket", "애프터"]
+effective_from = 2026-09-14
+source = "E5"
+
+[[boundary]]
+id = "NXT_PRE_OPEN"
+market = "NXT"
+time = "08:00"
+meaning = "NXT 프리마켓 시작"
+keywords = ["nxt", "premarket", "프리", "넥스트레이드"]
+source = "E7"
+
+[[boundary]]
+id = "NXT_PRE_CLOSE"
+market = "NXT"
+time = "08:50"
+meaning = "NXT 프리마켓 종료"
+keywords = ["nxt", "premarket", "프리", "넥스트레이드"]
+source = "E7"
+
+[[boundary]]
+id = "SOR_START"
+market = "SOR"
+time = "09:00"
+meaning = "SOR 적용 시작 (데모 시스템 규칙)"
+keywords = ["sor", "smart", "rout", "최선집행"]
+source = "DEMO"
+
+[[boundary]]
+id = "SOR_END"
+market = "SOR"
+time = "20:00"
+meaning = "SOR 적용 종료"
+keywords = ["sor", "smart", "rout", "최선집행"]
+effective_from = 2026-09-14
+source = "E6"
+
+[[boundary]]
+id = "MORNING_END"
+market = "PRODUCT"
+time = "12:00"
+meaning = "'오전 제외' 조건의 오전 끝 (투자자용 룰 빌더 제품 설정, 시장 현지 시각)"
+keywords = ["morning", "오전"]
+source = "DEMO"
+
+[[boundary]]
+id = "US_REGULAR_OPEN"
+market = "US"
+time = "09:30"
+tz = "America/New_York"
+meaning = "미국 정규장 시작"
+keywords = ["us", "usa", "nyse", "nasdaq", "미국", "해외", "overseas"]
+source = "NYSE"
+
+[[boundary]]
+id = "US_REGULAR_CLOSE"
+market = "US"
+time = "16:00"
+tz = "America/New_York"
+meaning = "미국 정규장 마감"
+keywords = ["us", "usa", "nyse", "nasdaq", "미국", "해외", "overseas"]
+source = "NYSE"
+
+# ── 폐기된 경계 (코드에 남아 있으면 변경 누락 의심) ──────────
+
+[[retired]]
+id = "SOR_END_UNTIL_20260913"
+market = "SOR"
+time = "15:30"
+meaning = "SOR 적용 종료 (KRX 애프터마켓 개장 전)"
+keywords = ["sor", "smart", "rout", "최선집행"]
+replaced_by = "SOR_END"
+retired_on = 2026-09-14
+source = "E6"
+
+# ── 경계 테스트 probe (데모 시스템의 동작 계약) ─────────────
+
+[[probe]]
+id = "krx_session"
+description = "KRX 세션 판정"
+tz = "Asia/Seoul"
+default = "CLOSED"
+sample_dates = [2026-11-18]
+
+  [[probe.window]]
+  start = "09:00"
+  end = "15:30"
+  expect = "REGULAR"
+  source = "KRX"
+
+  [[probe.window]]
+  start = "16:00"
+  end = "20:00"
+  expect = "AFTER"
+  effective_from = 2026-09-14
+  source = "E5"
+
+[[probe]]
+id = "sor_enabled"
+description = "SOR 라우팅 적용 여부"
+tz = "Asia/Seoul"
+default = false
+sample_dates = [2026-11-18]
+
+  [[probe.window]]
+  start = "09:00"
+  end = "20:00"
+  expect = true
+  effective_from = 2026-09-14
+  source = "E6"
+
+[[probe]]
+id = "us_regular_open"
+description = "미국 정규장 개장 여부"
+tz = "America/New_York"
+default = false
+# 서머타임 중(7/15), 시작 직후(3/9), 해제 직후(11/2), 해제 후(11/18)
+sample_dates = [2026-03-09, 2026-07-15, 2026-11-02, 2026-11-18]
+
+  [[probe.window]]
+  start = "09:30"
+  end = "16:00"
+  expect = true
+  source = "NYSE"
