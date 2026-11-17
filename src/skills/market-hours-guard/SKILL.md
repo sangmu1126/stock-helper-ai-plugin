@@ -85,7 +85,16 @@ python scripts/mhg.py gen-tests --calendar market_hours.toml --out tests/market_
 남은 확인 사항: <사람이 판단해야 할 것, 검사 범위 밖인 것>
 ```
 
-CI에 넣으려면 `scan`(실패 시 종료 코드 1)과 생성된 테스트를 파이프라인에 추가하도록 제안한다.
+CI에 넣으려면 `scan`(실패 시 종료 코드 1)과 생성된 테스트를 파이프라인에 추가하도록 제안한다. GitHub를 쓰면 `scan --sarif mhg.sarif`(경로는 저장소 루트 기준)로 내보내고 `github/codeql-action/upload-sarif`로 올리면 PR의 해당 줄에 판정이 표시된다.
+
+### 6. 제도 변경 전에 영향 미리보기
+
+```bash
+python scripts/mhg.py impact --repo <저장소> --calendar market_hours.toml --new-calendar market_hours.next.toml
+```
+
+- 공지를 받아 새 기준표 초안을 만들었으면, 코드를 고치기 전에 `impact`로 판정이 바뀌는 줄(새 MISMATCH·STALE, 다른 기준으로 해석이 바뀌는 줄)을 보여 준다. 코드는 바꾸지 않는다.
+- 새 실패가 생기면 종료 코드 1. 결과(`impact.md`)를 사용자와 함께 보고 수정 범위를 정한다.
 
 ## 시연
 
@@ -97,6 +106,7 @@ CI에 넣으려면 `scan`(실패 시 종료 코드 1)과 생성된 테스트를 
 시스템 용량·성능 테스트, 거래소·SOR 제공사 장애 원인 분석, 실주문, 코드에 적힌 휴장일 목록의 정적 대조(휴장일은 경계 테스트로만 확인), DB·원격 설정 서버에 저장된 값.
 
 판정을 보고할 때 주의할 점(공개 저장소 평가에서 확인, `src/docs/MARKET_HOURS_REAL_REPOS.md`):
+- 특수일 기준(예: 수능일 10:00)은 `requires_keyword = true`라 그날의 단어가 문맥에 있을 때만 MATCH가 된다. 새 특수일 기준을 넣을 때도 이 표시를 단다.
 - MATCH는 "기준표에 있는 값"이라는 뜻이지 의미까지 맞다는 뜻이 아니다. 일본 장 09:00처럼 값만 같은 경우가 있으니, 고칠 대상의 MATCH도 문맥을 읽고 `mhg:` 주석으로 의미를 고정한다.
 - 1MB를 넘는 파일은 읽지 않는다. 출력의 `검사하지 않은 파일` 목록을 사용자에게 그대로 알린다.
 - 주변에 거래 관련 단어가 없는 시각(예: `if t <= "090000"`)은 보고하지 않을 수 있다.

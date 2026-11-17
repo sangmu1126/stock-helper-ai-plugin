@@ -1,6 +1,6 @@
 {
   "name": "safe-trade-rule-builder",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Safe-trading plugin for KakaoPay Securities that runs entirely locally (no cloud, no external AI API). In-house: market-hours-guard checks that trading-hours changes (after-market, SOR window, US DST, exchange special days) are applied consistently across code and config; margin-rule-check verifies counseling scripts, notices, configs, and calculation code against the official collateral rules. Investors: safe-trade-rule-builder computes forced-liquidation deadlines and required deposits and turns trade requests into safe, manually confirmed rule drafts.",
   "author": {
     "name": "AX Hackathon Team"
@@ -10,7 +10,7 @@
   "interface": {
     "displayName": "KakaoPay Securities Safe Trade",
     "shortDescription": "사내에는 거래시간·신용 규칙 점검, 투자자에게는 반대매매·안전 매매 점검.",
-    "longDescription": "Three skills in one plugin, all deterministic and local. market-hours-guard (in-house developers/QA): compares time values in brokerage code and config with an approved session calendar including exchange special days, flags stale, DST-unsafe, or ambiguous values, and generates boundary-time tests for pytest or JUnit 5 (Java/Kotlin). margin-rule-check (in-house counseling quality/QA/developers): finds wrong collateral-ratio and forced-liquidation statements in scripts, notices, configs, and Word (.docx) documents, and generates rule-conformance tests (pytest or JUnit 5) for calculation code. safe-trade-rule-builder (investors): checks credit-trading collateral ratios against KakaoPay Securities' published rules with sources, and converts trade requests (structured by Codex as rule JSON) into explainable drafts with session and time-window checks, policy guardrails, and manual confirmation. No live orders.",
+    "longDescription": "Three skills in one plugin, all deterministic and local. market-hours-guard (in-house developers/QA): compares time values in brokerage code and config with an approved session calendar including exchange special days, flags stale, DST-unsafe, or ambiguous values, generates boundary-time tests for pytest or JUnit 5 (Java/Kotlin), previews the impact of a calendar change, and exports SARIF for GitHub code scanning. margin-rule-check (in-house counseling quality/QA/developers): finds wrong collateral-ratio and forced-liquidation statements in scripts, notices, configs, and Word (.docx) documents, and generates rule-conformance tests (pytest or JUnit 5) for calculation code, with SARIF output. safe-trade-rule-builder (investors): checks credit-trading collateral ratios against KakaoPay Securities' published rules with sources, and converts trade requests (structured by Codex as rule JSON) into explainable drafts with session and time-window checks, policy guardrails, and manual confirmation. No live orders.",
     "developerName": "AX Hackathon Team",
     "category": "Productivity",
     "capabilities": [

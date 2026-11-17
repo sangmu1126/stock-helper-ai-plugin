@@ -27,6 +27,7 @@ python scripts/margin_rule_check.py lint --repo <점검할 폴더> --out mrc-out
 - 같은 줄에 기준이 여러 개 나오면(예: "120% 미만이면 당일 140%까지") 각 숫자가 그 줄에 나온 기준 중 하나와 맞으면 OK로 본다.
 - 설정 키(`maintenance_ratio`, `emergency_ratio`, `watch_alert_ratio`, `liquidation_*_days`, `deposit_deadline_*`)도 검사한다.
 - 종료 코드 1이면 고칠 것이 있다. CI에 넣어 배포 전에 막을 수 있다.
+- `--sarif mrc.sarif`로 SARIF를 함께 쓰면 GitHub code scanning이 PR의 해당 줄에 표시한다(Word는 파일 단위, 문단 번호는 메시지에).
 
 Codex가 할 일: 보고서의 각 줄을 열어 고객에게 나가는 문장을 규칙에 맞게 고치고(수정 diff는 담당자 검토), 다시 lint를 돌려 0건을 확인한다. 법률·준법 표현은 바꾸지 말고 숫자와 일정만 고친다.
 

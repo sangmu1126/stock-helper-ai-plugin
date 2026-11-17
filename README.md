@@ -11,8 +11,16 @@
 | 형태 | Codex 플러그인(스킬 3개 + 로컬 런타임), Python 3.11+ |
 | 핵심 구조 | 판정은 결정적 코드가 맡고, 문장 이해·설명·코드 수정은 Codex가 맡음 |
 | 근거 | 금감원 전산장애 통계, 담보비율 오안내 보도, 회사 공식 안내·공지, 거래소 발표 ([근거 문서](src/docs/MARKET_HOURS_EVIDENCE.md), [신용 가드 근거](src/docs/MARGIN_GUARD.md)) |
-| 검증 | 테스트 289개와 ruff 린트를 GitHub Actions CI에서 실행(생성된 JUnit 테스트를 실제 JDK로 실행하는 것 포함). 합성 저장소·가상 자료로 수정 전후 재현, 공개 증권 저장소 5곳으로 오탐 평가 |
+| 검증 | 테스트 300개와 ruff 린트를 GitHub Actions CI에서 실행(생성된 JUnit 테스트를 실제 JDK로 실행하는 것 포함). 합성 저장소·가상 자료로 수정 전후 재현, 공개 증권 저장소 5곳으로 오탐 평가 |
 | 외부 연결 | 없음. 실시간 시세(yfinance)만 선택 사항 |
+
+### 실행 기록과 외부 기여
+
+- **공개 PR:** 한국투자증권 공식 예제의 폐지된 시간외 단일가 안내 9곳을 수정하는 [PR #91](https://github.com/koreainvestment/open-trading-api/pull/91)을 제출했습니다. 설명 문구만 변경했으며 해당 TR의 현행 제공 시간은 확정하지 않았습니다. PR 제출은 반영·승인을 의미하지 않습니다.
+- **실제 CLI 기록:** [실행 요약](docs/media/demo-evidence/summary.json), [변경 전 경계 테스트](docs/media/demo-evidence/mhg-before-tests.txt), [수정 예제 경계 테스트](docs/media/demo-evidence/mhg-after-tests.txt), [상담 문구 점검](docs/media/demo-evidence/mrc-lint.txt), [반대매매 가드](docs/media/demo-evidence/margin-guard.txt), [달러 조건 룰](docs/media/demo-evidence/usd-rule.txt).
+- **화면 촬영:** [캡처 안내와 현재 상태](docs/media/CAPTURE.md). 위 기록은 기존 합성 원본·수정 예제의 실제 CLI 실행 결과이며, Codex 앱 화면 캡처나 실시간 수정 녹화가 아닙니다.
+
+CLI 기록은 `python tools/record_demo_evidence.py`로 다시 생성할 수 있습니다. 작업·사용자 경로 접두어만 가렸고 AI 전체 대화 로그는 변경하지 않았습니다.
 
 ## 배경
 
@@ -86,12 +94,15 @@ Windows 콘솔에서 한글이 깨지면 `$env:PYTHONIOENCODING="utf-8"`을 먼�
 - **주석으로 의미 고정:** Codex가 고친 줄에 `mhg: <기준 ID>`를 답니다. 다음에 기준표가 바뀌면 그 줄이 자동으로 `MISMATCH`가 됩니다.
 - **경계 시각 테스트:** 기준표에서 구간 경계 ±1초, 서머타임 전후, 특수일·휴장일 케이스를 생성합니다. Python 저장소는 pytest, Java·Kotlin 저장소는 JUnit 5(`--format junit`)로 만듭니다.
 - **읽는 코드:** Python, Java·Kotlin(`LocalTime.of`), Spring cron(6필드), YAML·JSON·properties 설정, 주석·문서 속 시각.
+- **CI와 PR 화면:** `--sarif`로 결과를 SARIF로 내보내면 GitHub code scanning이 PR의 해당 줄에 STALE·MISMATCH를 표시합니다. 이 저장소의 CI도 런타임 세션 설정을 이렇게 검사합니다.
+- **기준표 변경 영향 미리보기:** 제도 변경 공지가 나오면 `impact`로 "새 기준표를 적용하면 어느 줄이 MISMATCH·STALE이 되는지"를 코드를 고치기 전에 봅니다.
 - 표준 라이브러리만 씁니다.
 
 ```bash
 python src/skills/market-hours-guard/scripts/mhg.py check-calendar --calendar src/skills/market-hours-guard/assets/calendar.demo.toml
 python src/skills/market-hours-guard/scripts/mhg.py scan --repo src/skills/market-hours-guard/examples/toy-broker --calendar src/skills/market-hours-guard/assets/calendar.demo.toml
 python src/skills/market-hours-guard/scripts/mhg.py gen-tests --calendar src/skills/market-hours-guard/assets/calendar.demo.toml --out mhg-output/junit --format junit --java-package toybroker
+python src/skills/market-hours-guard/scripts/mhg.py scan --repo src/runtime --calendar src/skills/market-hours-guard/assets/calendar.demo.toml --sarif mhg-output/runtime.sarif
 python -m pytest -q tests/market_hours_guard
 ```
 
@@ -107,6 +118,7 @@ python -m pytest -q tests/market_hours_guard
 - **수능일(2026-11-19)에는 정규장이 10:00~16:30, 애프터마켓이 17:00~20:00입니다.** 평소 시각을 쓰는 코드는 그날 09:00을 정규장으로, 15:30 이후를 장 종료로 잘못 판정합니다.
 - **휴장일은 한국거래소가 공지한 달력(2026~2027년)을 씁니다.** 연말휴장일(12/31)처럼 공휴일이 아닌 휴장일을 모르는 코드는 그날 09:00을 정규장으로 판정합니다.
 - 이 스킬로 투자자용 스킬과 로컬 런타임을 검사하면 거래시간 값이 모두 기준표와 일치합니다. 이 상태는 테스트로 고정돼 있습니다.
+- 가상으로 SOR 종료를 21:00으로 바꾼 기준표를 `impact`에 넣으면, 주석을 단 2곳(라우터 상수, 정산 cron)이 새로 MISMATCH가 된다고 미리 알려 주고 종료 코드 1을 냅니다.
 
 **공개 저장소 평가.** 증권사 공식 예제(한국투자, 키움)와 라이브러리·봇 등 공개 저장소 5곳에 돌렸습니다. 처음에는 769건 중 547건이 API 코드 목록(`4:10~20`), 종목코드(`"005930"`), 슬라이스(`row[9:21]`)를 시각으로 읽은 오탐이었습니다. 고친 뒤 223건 중 시각이 아닌 판정은 0건입니다. 한국투자증권 공식 예제에서는 2026-09-14에 폐지된 **시간외 단일가(16:00~18:00) 안내 9곳을 STALE로 찾았습니다.** 값만 같은 MATCH(일본 장 09:00 ↔ KRX 개장)와 1MB 넘는 파일 같은 한계도 함께 적었습니다 ([MARKET_HOURS_REAL_REPOS.md](src/docs/MARKET_HOURS_REAL_REPOS.md)).
 
@@ -120,10 +132,12 @@ python -m pytest -q tests/market_hours_guard
 python src/skills/margin-rule-check/scripts/margin_rule_check.py lint --repo src/skills/margin-rule-check/examples/support-docs
 python src/skills/margin-rule-check/scripts/margin_rule_check.py gen-tests --out mrc-output/tests
 python src/skills/margin-rule-check/scripts/margin_rule_check.py gen-tests --out mrc-output/junit --format junit --java-package toymargin
+python src/skills/margin-rule-check/scripts/margin_rule_check.py lint --repo src/skills/margin-rule-check/examples/support-docs --sarif mrc-output/mrc.sarif
 ```
 
 - 문서는 md·txt·html·yaml·json 같은 텍스트와 **Word(.docx)** 를 읽습니다. Word는 문단 번호로 위치를 알려 줍니다. 옛 형식(.doc)과 한글(.hwp)은 읽지 않습니다.
 - 계산 코드 테스트는 pytest와 **JUnit 5**(Java·Kotlin)로 만들 수 있습니다. Java판 가상 모듈(`toy-margin-service-java`)도 같은 결과를 냅니다.
+- `--sarif`로 내보내면 잘못된 안내가 PR의 해당 줄(Word는 파일과 문단 번호)에 표시됩니다.
 
 | 대상 (가상 자료) | 수정 전 | 수정 후 |
 | --- | --- | --- |
@@ -191,7 +205,7 @@ python -m pytest -q
 ruff check src tests tools
 ```
 
-- 테스트 289개가 파이썬 경로 설정 없이 통과합니다. CI(GitHub Actions)에서 린트와 함께 실행합니다.
+- 테스트 300개가 파이썬 경로 설정 없이 통과합니다. CI(GitHub Actions)에서 린트와 함께 실행합니다.
 - 그중 4개는 생성된 JUnit 테스트를 실제로 컴파일·실행합니다. JDK와 JUnit 콘솔 런처(`JUNIT_CONSOLE_JAR`)가 없으면 로컬에서는 건너뛰고, CI에서는 실패로 처리합니다.
 - 플러그인 소스에 클라우드 SDK나 외부 AI API SDK가 없다는 것도 테스트로 확인합니다.
 
@@ -207,7 +221,7 @@ src/                                  # Codex 플러그인 루트
 ├── runtime/                          # 룰을 평가하는 로컬 런타임 (세션 설정 공용)
 ├── docs/                             # 근거·설계 문서, 프로젝트 요약
 └── requirements.txt
-tests/                                # 테스트 289개
+tests/                                # 테스트 300개
 docs/reboot/                          # 주제 선정 과정, 결정 기록, 보관 자료
 tools/package_submission.py           # 해커톤 제출용 패키징 도구(기록용)
 ```
@@ -215,7 +229,7 @@ tools/package_submission.py           # 해커톤 제출용 패키징 도구(기
 ## 한계
 
 - 사내용 스킬은 합성 저장소, 가상 자료, 공개 저장소 5곳으로 검증했습니다. 실제 회사 저장소·문서에서의 효과는 측정하지 않았습니다.
-- 거래시간 점검기의 MATCH는 "기준표에 있는 값"이라는 뜻입니다. 공개 저장소에서는 값만 같은 MATCH가 있었습니다(95건 중 37건). 그래서 고칠 대상은 문맥을 확인해 주석으로 의미를 고정합니다.
+- 거래시간 점검기의 MATCH는 "기준표에 있는 값"이라는 뜻입니다. 공개 저장소에서는 값만 같은 MATCH가 있었습니다(97건 중 37건, 수능일 기준을 고친 뒤 80건 중 20건). 그래서 고칠 대상은 문맥을 확인해 주석으로 의미를 고정합니다.
 - 담보비율 계산식은 공식 안내에 없어 업계 일반식을 쓰며, 출력에 "앱 표시값 우선"을 표시합니다.
 - 휴장일 달력은 거래소가 공지한 2027년 말까지만 들어 있습니다. 그 뒤 날짜는 세션 판정에서 `WAIT`로 두고 반대매매 날짜 계산에는 경고를 붙이므로, 매년 공지를 받아 갱신해야 합니다. 특수일은 공지가 확인된 날만 넣습니다.
 - 카카오페이증권 공개 주문·계좌 API가 없어 시세는 yfinance(선택)나 데모 시세를 쓰고, 계좌 정보는 사용자가 입력합니다.
@@ -234,4 +248,5 @@ tools/package_submission.py           # 해커톤 제출용 패키징 도구(기
   - 세션 판정을 공통화했습니다(애프터마켓, 수능일, 로컬 런타임 시간 조건).
   - 한국거래소·NYSE 공식 휴장일 달력(2026~2027)과 미국 조기 폐장을 세션 판정, 반대매매 영업일 계산, 두 사내용 스킬의 테스트 생성에 반영했습니다.
   - 사내용 스킬 두 개가 JUnit 5 테스트도 만들고(Java·Kotlin 저장소), 신용 규칙 점검이 Word(.docx)를 읽습니다. 공개 증권 저장소 5곳으로 거래시간 점검기를 평가해 오탐 원인 3가지를 고쳤습니다.
+  - 두 사내용 스킬이 SARIF로 결과를 내보내 PR 화면에 표시하고, 거래시간 점검기에 기준표 변경 영향 미리보기(`impact`)를 더했습니다. 수능일 기준값이 우연히 MATCH 되던 문제를 고쳤습니다(값만 같은 MATCH 37건 → 20건).
   - 달러 가격 조건과 사내용 신용 규칙 점검을 추가하고, CI 린트를 다시 켰습니다.
