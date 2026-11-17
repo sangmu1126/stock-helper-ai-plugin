@@ -86,3 +86,16 @@ def test_generated_files_are_skipped(tmp_path, calendar, examples):
     result = scan_repo(repo, calendar)
     assert result.stats.skipped_generated == 1
     assert all(f.path != "tests/gen.py" for f in result.findings)
+
+
+def test_files_over_size_limit_are_listed_in_report(tmp_path, calendar):
+    """크기 제한으로 읽지 않은 파일은 결과와 보고서에 이름이 나온다(실제 저장소 평가에서 키움 API 명세 3.8MB가 조용히 빠졌음)."""
+    from market_hours_guard.extract import MAX_BYTES
+    from market_hours_guard.report import render_markdown
+
+    (tmp_path / "small.py").write_text('MARKET_CLOSE = "15:30"  # KRX 정규장 마감\n', encoding="utf-8")
+    (tmp_path / "spec.json").write_text('{"x": "' + "a" * (MAX_BYTES + 1) + '"}', encoding="utf-8")
+    result = scan_repo(tmp_path, calendar)
+    assert result.stats.large_files == ["spec.json"]
+    assert result.to_json()["coverage"]["skipped_large_files"] == ["spec.json"]
+    assert "검사하지 않은 파일 1개" in render_markdown(result) and "`spec.json`" in render_markdown(result)

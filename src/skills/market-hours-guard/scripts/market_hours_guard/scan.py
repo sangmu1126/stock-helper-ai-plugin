@@ -46,6 +46,7 @@ class ScanResult:
             "coverage": {
                 "files_scanned": self.stats.files_scanned,
                 "skipped_large": self.stats.skipped_large,
+                "skipped_large_files": self.stats.large_files,
                 "skipped_generated": self.stats.skipped_generated,
                 "time_expressions": self.occurrences,
                 "market_related": len(self.findings),

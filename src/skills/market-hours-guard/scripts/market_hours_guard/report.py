@@ -29,6 +29,14 @@ def _detail(n: int, f: Finding) -> list[str]:
     return lines
 
 
+def _skipped_line(result: ScanResult) -> list[str]:
+    files = result.stats.large_files
+    if not files:
+        return []
+    shown = ", ".join(f"`{p}`" for p in files[:5]) + (f" 외 {len(files) - 5}개" if len(files) > 5 else "")
+    return [f"- **검사하지 않은 파일 {len(files)}개** (1MB 초과): {shown} — 직접 확인하거나 나눠서 검사하세요"]
+
+
 def render_markdown(result: ScanResult) -> str:
     cal = result.calendar
     counts = result.counts()
@@ -40,6 +48,7 @@ def render_markdown(result: ScanResult) -> str:
          + (f", 기준일 {cal.basis_date}" if cal.basis_date else "") + ")"),
         (f"- 검사 파일 {result.stats.files_scanned}개 · 시각 표현 {result.occurrences}개 · "
          f"거래시간 문맥 {len(result.findings)}개 · 무관 {result.non_market}개 제외"),
+        *_skipped_line(result),
         "",
         "| 상태 | 건수 | 의미 |",
         "| --- | ---: | --- |",

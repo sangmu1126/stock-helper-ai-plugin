@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import time
 from pathlib import Path
 
@@ -37,7 +37,16 @@ CALL_RE = re.compile(
     r"\s*(?:minute\s*=\s*)?(\d{1,2})(?:\s*,\s*(?:second\s*=\s*)?(\d{1,2}))?\s*[,)]"
 )
 COMPACT_RE = re.compile(r"""(["'])(\d{4}|\d{6})\1""")
-COMPACT_HINT_RE = re.compile(r"time|hhmm|hms|open|close|start|end|cutoff|시각|시간|마감|개장", re.IGNORECASE)
+# 숫자 문자열("153000")은 그 앞에 시각 이름이 있을 때만 시각으로 본다. 종목코드("005930")·필드 번호('1223')·
+# 연월('202606')을 시각으로 읽지 않도록, 이름은 단어 단위로 보고 날짜 이름(dt, date ...)이면 뺀다.
+COMPACT_HINT_WORDS = frozenset({"time", "hour", "hhmm", "hhmmss", "hms", "tm", "open", "close", "start", "end", "cutoff"})
+NAME_BOUNDARY_RE = re.compile(r"[,(\[{;]")
+COMPACT_HINT_KO_RE = re.compile(r"시각|시간|마감|개장")
+COMPACT_DATE_WORDS = frozenset({"dt", "date", "ymd", "yyyymmdd", "yyyymm", "ym", "day", "month", "year"})
+COMPACT_DATE_KO_RE = re.compile(r"일자|날짜|년월|연월")
+# API 문서의 코드 목록("0:전체, 1:5미만, 4:10~20, 5:20일전")에 나오는 'N:숫자'는 시각이 아니다.
+UNIT_AFTER_RE = re.compile(r"(?:일|주|만|천|원|초|개|년|배|회|억|%|미만|이상|이하|초과|분전|틱|위|호가|건)")
+RANGE_TO_NUMBER_RE = re.compile(r"\s*~\s*\d+(?![\d:])")
 CRON_RE = re.compile(r"""(["'])\s*((?:[^\s"']+\s+){4,6}[^\s"']+)\s*\1""")
 CRON_FIELD_RE = re.compile(r"^[\d*/,\-?LW#A-Za-z]+$")
 NUM_LIST_RE = re.compile(r"^\d{1,2}(?:,\d{1,2})*$")
@@ -78,6 +87,7 @@ class FileStats:
     files_scanned: int = 0
     skipped_large: int = 0
     skipped_generated: int = 0
+    large_files: list[str] = field(default_factory=list)  # 크기 제한으로 읽지 않은 파일 (보고서에 표시)
 
 
 def _valid(h: int, m: int, s: int = 0) -> bool:
@@ -94,6 +104,30 @@ def _cron_times(expr: str) -> list[time]:
     if not (NUM_LIST_RE.match(minute) and NUM_LIST_RE.match(hour)):
         return []
     return [time(int(h), int(m)) for h in hour.split(",") for m in minute.split(",") if _valid(int(h), int(m))]
+
+
+def _code_list_item(m: re.Match, line: str) -> bool:
+    """'N:숫자' 뒤에 단위(일·만·미만…)나 '~숫자'가 오면 코드 목록 항목이다(예: 4:10~20, 2:10미만, 5:20일전).
+
+    '분'은 실제 시각에도 붙으므로("08:45분 경") 자릿수를 맞추지 않았거나(5:15분) 앞뒤 숫자가 같을 때(10:10분)만 코드로 본다.
+    """
+    rest = line[m.end():]
+    if UNIT_AFTER_RE.match(rest) or RANGE_TO_NUMBER_RE.match(rest):
+        return True
+    start = m.start()
+    if start >= 2 and line[start - 1] == "[" and (line[start - 2].isalnum() or line[start - 2] in "_])"):
+        return True  # 슬라이스: row[9:21], rf1[11:40]
+    hour, minute = m.group(1), m.group(2)
+    return rest.startswith("분") and (len(hour) == 1 or hour == minute)
+
+
+def _compact_named_as_time(prefix: str) -> bool:
+    """숫자 문자열 바로 앞의 이름(같은 줄, 쉼표·괄호 뒤)이 시각 이름이고 날짜 이름이 아닌지."""
+    near = NAME_BOUNDARY_RE.split(prefix)[-1]
+    words = tokenize(near)
+    if words & COMPACT_DATE_WORDS or COMPACT_DATE_KO_RE.search(near):
+        return False
+    return bool(words & COMPACT_HINT_WORDS or COMPACT_HINT_KO_RE.search(near))
 
 
 def find_times(line: str) -> list[tuple[int, str, str, time]]:
@@ -116,13 +150,16 @@ def find_times(line: str) -> list[tuple[int, str, str, time]]:
         if _valid(h, mi, s):
             add(m.start(), m.end(), "call", m.group(0).rstrip(",) "), time(h, mi, s))
     for m in LITERAL_RE.finditer(line):
+        if _code_list_item(m, line):
+            continue
         add(m.start(), m.end(), "literal", m.group(0), time(int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)))
-    if COMPACT_HINT_RE.search(line):
-        for m in COMPACT_RE.finditer(line):
-            digits = m.group(2)
-            h, mi, s = int(digits[:2]), int(digits[2:4]), int(digits[4:6] or 0)
-            if _valid(h, mi, s):
-                add(m.start(2), m.end(2), "compact", digits, time(h, mi, s))
+    for m in COMPACT_RE.finditer(line):
+        if not _compact_named_as_time(line[:m.start()]):
+            continue
+        digits = m.group(2)
+        h, mi, s = int(digits[:2]), int(digits[2:4]), int(digits[4:6] or 0)
+        if _valid(h, mi, s):
+            add(m.start(2), m.end(2), "compact", digits, time(h, mi, s))
     for m in HOUR_CMP_RE.finditer(line):
         h = int(m.group(1))
         if _valid(h, 0):
@@ -217,6 +254,7 @@ def extract_repo(root: Path, include_docs: bool = False,
     for file in iter_files(root, include_docs, exclude):
         if file.stat().st_size > MAX_BYTES:
             stats.skipped_large += 1
+            stats.large_files.append(file.relative_to(root).as_posix())
             continue
         with file.open(encoding="utf-8", errors="replace") as handle:
             head = "".join(handle.readline() for _ in range(5))

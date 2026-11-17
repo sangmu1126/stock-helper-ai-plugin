@@ -61,6 +61,9 @@ def _cmd_scan(args) -> int:
     summary = " · ".join(f"{s} {counts[s]}" for s in STATUS_ORDER if counts[s])
     print(f"[mhg] {repo.name}: 파일 {result.stats.files_scanned}개, 거래시간 표현 {len(result.findings)}개"
           f" → {summary or '해당 없음'}")
+    if result.stats.large_files:
+        print(f"[mhg] 주의: 1MB를 넘어 검사하지 않은 파일 {len(result.stats.large_files)}개 — "
+              + ", ".join(result.stats.large_files[:3]) + (" 외" if len(result.stats.large_files) > 3 else ""))
     for f in result.findings:
         if f.status in ("MATCH", "IGNORED") and not args.verbose:
             continue
