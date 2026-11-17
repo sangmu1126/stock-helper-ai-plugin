@@ -54,6 +54,7 @@ class RuleDraft:
     confirmation_checklist: dict[str, Any]
     user_questions: list[str]
     disclaimer: str
+    margin_guard: dict[str, Any] | None = None
 
 
 class MarketDataProvider(Protocol):

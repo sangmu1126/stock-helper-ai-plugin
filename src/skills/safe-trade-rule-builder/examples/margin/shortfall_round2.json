@@ -1,0 +1,11 @@
+{
+  "_note": "가상 계좌. 담보부족 2회차, 담보비율 135% — 2026-11-09~2027-02-05 한시 유예 판정 시연용.",
+  "as_of": "2026-11-18",
+  "credit_loan": 100000000,
+  "cash": 0,
+  "holdings": [
+    {"name": "인터넷주 B (가상)", "quantity": 1000, "prev_close": 135000, "grade": "B"}
+  ],
+  "shortfall_round": 2,
+  "shortfall_date": "2026-11-17"
+}

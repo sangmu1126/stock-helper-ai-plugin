@@ -8,6 +8,12 @@ from confirmation import build_confirmation_checklist
 from decision_engine import DecisionEngine
 from decision_log import create_decision_log
 from evaluation import evaluate_trigger
+from margin_guard import (
+    MarginAccount,
+    detect_margin_intent,
+    load_margin_rules,
+    pre_trade_check,
+)
 from market_data import get_provider
 from models import MarketDataProvider, MarketQuote, RuleDraft
 from parser_strategy import parse_intent
@@ -24,6 +30,7 @@ def build_rule(
     backtest_period: str = "6mo",
     backtest_interval: str = "1d",
     parser_strategy: str = "auto",
+    margin_account: MarginAccount | None = None,
 ) -> RuleDraft:
     parsed = parse_intent(intent, parser_strategy)
     parts = parsed.to_legacy_dicts()
@@ -38,6 +45,14 @@ def build_rule(
     emotional_flags = parts["emotional_risk_flags"]
     ambiguities = parts["ambiguities"]
     parser_meta = parts["parser"]
+
+    # 신용 매수 의도면 반대매매 구간을 계산하고, 고객이 확인할 때까지 활성화하지 않는다.
+    # 확인 질문(ambiguity)이 생기므로 기존 정책 엔진이 REQUIRE_CLARIFICATION을 낸다.
+    margin_guard: dict[str, Any] | None = None
+    if detect_margin_intent(intent).kind == "credit_buy" and action == "prepare_buy_order":
+        amount = order.get("value") if order.get("mode") == "amount" else None
+        margin_guard = pre_trade_check(load_margin_rules(), amount=amount, account=margin_account)
+        ambiguities = [*ambiguities, {"field": "credit_risk", "question": margin_guard["acknowledgement_question"]}]
 
     quote: MarketQuote | None = None
     market_data: dict[str, Any] | None = None
@@ -108,6 +123,14 @@ def build_rule(
         ]
 
     guardrails = build_guardrails(emotional_flags, order, cancel_conditions)
+    if margin_guard:
+        guardrails["credit_risk"] = {
+            "acknowledgement_required": True,
+            "reason": margin_guard["reason"],
+            "collateral_ratio_pct": margin_guard.get("collateral_ratio_pct"),
+            "price_drop_to_pct": margin_guard.get("price_drop_to_pct"),
+            "rules_version": margin_guard["rules_version"],
+        }
     policy_result = evaluate_policy(
         intent=intent,
         action=action,
@@ -171,6 +194,7 @@ def build_rule(
             "현재 시장 데이터는 프로토타입용 yfinance를 사용하므로 지연되거나 제공되지 않을 수 있습니다. "
             "실제 서비스 전에는 승인된 증권사 데이터와 주문 API로 교체해 주세요."
         ),
+        margin_guard=margin_guard,
     )
 
 

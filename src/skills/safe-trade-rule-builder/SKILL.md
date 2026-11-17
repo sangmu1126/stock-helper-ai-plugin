@@ -1,6 +1,6 @@
 ---
 name: safe-trade-rule-builder
-description: Convert beginner investors' natural-language buy or sell intent into explainable, mechanical, serverless trading-rule drafts with risk guardrails. Use when the user asks to turn phrases like "buy Kakao if it falls 3%" into rule JSON, Lambda-style code, pre-trade health checks, circuit breakers, or a persuasion process that helps a novice understand whether to buy, sell, wait, or revise the rule without receiving direct investment advice.
+description: Convert beginner investors' natural-language buy or sell intent into explainable, mechanical, serverless trading-rule drafts with risk guardrails. Use when the user asks to turn phrases like "buy Kakao if it falls 3%" into rule JSON, Lambda-style code, pre-trade health checks, circuit breakers, or a persuasion process that helps a novice understand whether to buy, sell, wait, or revise the rule without receiving direct investment advice. Also use for credit/margin trading (신용, 빚투, 담보비율, 반대매매): pre-trade forced-liquidation thresholds, collateral shortfall deadlines and required deposit, the 2026-11 temporary grace rule, and collateral-ratio alerts.
 ---
 
 # Safe Trade Rule Builder
@@ -120,6 +120,39 @@ Recommended answer shape:
 ```
 
 Never say "buy", "sell", "profitable", "expected return", or "safe to execute" as a conclusion. Say "eligible for manual confirmation" only when all required checks pass.
+
+## Credit Trading Guard (신용거래 반대매매 가드)
+
+Why: KakaoPay Securities' credit lending grew 168.5% year over year, complaints rose 829% in H1 2026, and a reported case had a customer told "120% is enough" when the maintenance ratio is 140%. Customers need to know *when* and *how much* to deposit, and the rules (140% / 120% / D+1 / D+2 / temporary grace) are easy to get wrong.
+
+Rules live only in `config/margin_rules.json`, each with a `source` (official credit guide, 2026-11-06 grace notice) or `ASSUMPTION`. Never state a threshold, deadline, or grace condition that is not in that file. Mention `rules_version` when answering.
+
+Routing (automatic in `rule_builder.py`):
+
+- Credit buy intent ("신용으로", "빚투", "미수" + buy) → normal rule plus `margin_guard` (pre-trade check). An acknowledgement question is added, so the decision becomes `REQUIRE_CLARIFICATION`. Explain the starting collateral ratio and the price drop that reaches 140% (shortfall) and 120% (emergency). If the result says the buy starts in shortfall, say so first.
+- "담보비율 N% 아래로 내려가면 알려줘" → collateral alert rule (`notify_only`), not a price rule. If N ≤ 140, warn that the alert fires only after the account is already short.
+- Questions about 담보비율/반대매매 → rule explanation. If the user believes a ratio below 140% is safe (e.g. "120%만 맞추면"), correct it first.
+- With `--account <snapshot.json>`: assess the account.
+
+Explaining an assessment, in this order:
+
+1. Ratio and status (`SAFE` ≥150, `WATCH` 140–150, `SHORTFALL` <140, `EMERGENCY` <120).
+2. Timeline. If `timeline.clock` is `EMERGENCY`, the customer must reach 140% **the same day**, even if the ratio is now above 120% after a partial deposit; otherwise liquidation is D+1.
+3. Amount to restore 140%: cash deposit or loan repayment (repayment needs less money). These are arithmetic, not advice; exclude interest and fees.
+4. Grace (`ELIGIBLE` / `NEEDS_ROUND` / `NOT_ELIGIBLE`) with its conditions (shortfall round 2, 130–140%, 08:00 check, once).
+5. Warnings: automatic cash repayment may still run; liquidation sells with a 15–20% haircut, so more shares can be sold than the shortfall.
+6. Always add: the app's displayed ratio and schedule take precedence; this is not investment advice.
+
+Do not suggest which stock to sell or recommend taking or avoiding credit. Present the numbers and the deadlines.
+
+```powershell
+python src\skills\safe-trade-rule-builder\scripts\margin_check.py assess --account src\skills\safe-trade-rule-builder\examples\margin\misguided_after_deposit.json
+python src\skills\safe-trade-rule-builder\scripts\margin_check.py pre-trade --amount 20000000 --account src\skills\safe-trade-rule-builder\examples\margin\watch.json
+python src\skills\safe-trade-rule-builder\scripts\margin_check.py alert --threshold 150 --account src\skills\safe-trade-rule-builder\examples\margin\watch.json
+python src\skills\safe-trade-rule-builder\scripts\rule_builder.py --intent "담보비율 120%만 맞추면 반대매매 안 되지?" --format markdown
+```
+
+Account snapshot fields: `as_of`, `credit_loan`, `accrued_interest`, `cash`, `holdings[{name, quantity, prev_close, grade}]`, `shortfall_round`, `shortfall_date` (first day below 140%), `emergency_date` (day it fell below 120%), `holidays`. Example accounts under `examples/margin/` are synthetic.
 
 ## Script
 

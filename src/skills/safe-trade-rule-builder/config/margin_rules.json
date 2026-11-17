@@ -1,0 +1,76 @@
+{
+  "version": "margin.kakaopaysec.2026-11-18",
+  "broker": "카카오페이증권",
+  "checked_on": "2026-11-18",
+  "sources": {
+    "CREDIT_GUIDE": {
+      "title": "카카오페이증권 신용공여 및 매매 관련 안내",
+      "url": "https://www.kakaopaysec.com/customer/creditntrading/dynamicPage.do"
+    },
+    "GRACE_NOTICE": {
+      "title": "카카오페이증권 신용거래융자 반대매매 한시적 유예 안내 (2026-11-06)",
+      "url": "https://www.kakaopaysec.com/customer/notice/dynamicBoardPageDetail.do?id=7594"
+    },
+    "ASSUMPTION": {
+      "title": "공식 안내에 없는 값 — 업계 일반식 또는 제품 설정",
+      "url": ""
+    }
+  },
+  "thresholds": {
+    "maintenance_pct": {"value": 140, "source": "CREDIT_GUIDE", "text": "계좌담보비율 140%가 담보유지비율"},
+    "emergency_pct": {"value": 120, "source": "CREDIT_GUIDE", "text": "최소 담보유지비율 120%"},
+    "watch_pct": {"value": 150, "source": "ASSUMPTION", "text": "140%에 가까워졌음을 미리 알리는 제품 기준"}
+  },
+  "shortfall": {
+    "deposit_deadline_business_days": 1,
+    "liquidation_business_days": 2,
+    "source": "CREDIT_GUIDE",
+    "text": "140% 미만이면 익영업일(D+1)까지 추가 담보를 내야 하고, 납부하지 않으면 D+2에 반대매매"
+  },
+  "emergency": {
+    "restore_same_day": true,
+    "liquidation_business_days": 1,
+    "source": "CREDIT_GUIDE",
+    "text": "120% 미만이면 당일(D) 140% 이상으로 채워야 하며, 채우지 않으면 D+1에 반대매매"
+  },
+  "valuation": {
+    "price_basis": "한국거래소(KRX) 전일 종가",
+    "source": "CREDIT_GUIDE"
+  },
+  "liquidation_haircut": {
+    "by_grade": {"A": 0.15, "B": 0.15, "C": 0.20, "D": 0.20, "E": 0.20, "US": 0.15},
+    "source": "CREDIT_GUIDE",
+    "text": "반대매매 수량 산정 시 종목군별 할인율 적용 — 부족 금액보다 많은 수량이 매도될 수 있음"
+  },
+  "margin_rate_by_grade": {
+    "rates": {"A": 0.45, "B": 0.45, "C": 0.45, "D": 0.50, "E": null},
+    "default_grade": "A",
+    "source": "CREDIT_GUIDE",
+    "verified": false,
+    "text": "신용보증금률 A·B·C군 45%, D군 50%, E군 신용 불가. 원문 표의 레이아웃이 깨져 있어 재확인 필요"
+  },
+  "formula": {
+    "collateral_ratio": "(보유 주식 평가금액 + 예수금) / (신용융자금 + 미납 이자) × 100",
+    "source": "ASSUMPTION",
+    "text": "공식 안내 페이지에 계산식이 없어 업계 일반식을 사용. 실제 계좌의 담보비율은 앱 표시값이 우선"
+  },
+  "temporary_grace": [
+    {
+      "id": "GRACE_2026_11",
+      "effective_from": "2026-11-09",
+      "effective_to": "2027-02-05",
+      "shortfall_round": 2,
+      "min_ratio_pct": 130,
+      "max_ratio_pct": 140,
+      "check_time": "08:00",
+      "grace_count": 1,
+      "source": "GRACE_NOTICE",
+      "text": "담보부족 2회차 계좌 중 담보비율 130% 이상 140% 미만 계좌의 반대매매 1회 유예. 반대매매 당일 08시까지 130% 이상이어야 하며 연속 유예 불가",
+      "excluded": [
+        "담보부족 1회차 계좌는 유예 대상이 아님",
+        "1회차 중 담보비율 120% 미만 계좌는 다음 날 반대매매"
+      ],
+      "caveat": "유예 여부와 관계없이 반대매매 예정일 당일 담보부족 자동 현금상환이 진행될 수 있음"
+    }
+  ]
+}

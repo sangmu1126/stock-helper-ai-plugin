@@ -4,9 +4,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from dataclasses import asdict
+from pathlib import Path
 
 from builder import build_rule
+from margin_guard import (
+    assess_account,
+    build_alert_rule,
+    detect_margin_intent,
+    explain_rules,
+    load_account,
+    load_margin_rules,
+    render_margin_markdown,
+)
 from report_renderer import render_markdown_report
 
 
@@ -57,7 +68,41 @@ def main() -> int:
         choices=["ko", "en"],
         help="Markdown report language.",
     )
+    parser.add_argument(
+        "--account",
+        type=Path,
+        help="Credit account snapshot JSON for margin (반대매매) checks.",
+    )
     args = parser.parse_args()
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):
+            pass
+    account = load_account(args.account) if args.account else None
+
+    # 담보비율 알림·반대매매 질문은 종목 룰이 아니므로 신용거래 가드로 보낸다.
+    margin_intent = detect_margin_intent(args.intent)
+    if margin_intent.kind in {"collateral_alert", "rule_question"}:
+        rules = load_margin_rules()
+        if margin_intent.kind == "collateral_alert":
+            result = build_alert_rule(
+                rules, margin_intent.threshold_pct, account=account,
+                believed_safe_pct=margin_intent.believed_safe_pct,
+            )
+        else:
+            result = explain_rules(rules, believed_safe_pct=margin_intent.believed_safe_pct)
+            if account is not None:
+                result["assessment"] = assess_account(account, rules, believed_safe_pct=margin_intent.believed_safe_pct)
+        if args.format == "markdown":
+            lines = render_margin_markdown(result)
+            if result.get("assessment") and result["kind"] == "rule_explanation":
+                lines += render_margin_markdown(result["assessment"], heading="##")
+            print("\n".join(lines))
+        else:
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+
     draft = build_rule(
         args.intent,
         provider_name=args.provider,
@@ -66,6 +111,7 @@ def main() -> int:
         backtest_period=args.backtest_period,
         backtest_interval=args.backtest_interval,
         parser_strategy=args.parser,
+        margin_account=account,
     )
     if args.format == "markdown":
         print(render_markdown_report(draft, locale=args.locale))

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from margin_guard import render_margin_markdown
 from models import RuleDraft
 
 WARNING_MESSAGES = {
@@ -117,10 +118,11 @@ def render_korean_markdown_report(draft: RuleDraft) -> str:
             f"- 정책 판단: `{draft.policy_result.get('decision')}` / `{', '.join(draft.policy_result.get('reasons', []))}`",
             f"- 최종 결정: `{draft.decision_result.get('decision')}` / `{', '.join(draft.decision_result.get('reasons', []))}`",
             "",
-            "## 3. 해석",
-            "",
         ]
     )
+    if draft.margin_guard:
+        lines.extend(render_margin_markdown(draft.margin_guard, heading="## 2-1."))
+    lines.extend(["## 3. 해석", ""])
     lines.extend(_interpretation_lines_ko(draft))
     lines.extend(["", "## 4. 백테스트 상세", ""])
     lines.extend(_backtest_lines_ko(draft))

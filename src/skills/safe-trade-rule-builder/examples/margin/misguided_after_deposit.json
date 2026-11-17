@@ -1,0 +1,12 @@
+{
+  "_note": "위 가상 계좌가 '120%만 넘기면 된다'고 믿고 7,600만 원을 입금한 직후. 120%는 넘었지만 140%에는 못 미친다.",
+  "as_of": "2026-11-18",
+  "credit_loan": 500000000,
+  "cash": 76000000,
+  "holdings": [
+    {"name": "반도체주 A (가상)", "quantity": 2000, "prev_close": 280000, "grade": "A"}
+  ],
+  "shortfall_round": 1,
+  "shortfall_date": "2026-11-18",
+  "emergency_date": "2026-11-18"
+}
