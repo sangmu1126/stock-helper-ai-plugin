@@ -1,0 +1,13 @@
+{
+  "_sentence": "카카오가 전일 종가보다 3% 떨어지면 장 마감 30분 전에만 10만원만 매수 후보로 알려줘. 하루 한 번만.",
+  "asset": {"symbol": "035720.KS", "name": "Kakao Corp"},
+  "trigger": {"type": "price_drop_percent", "reference": "previous_close", "percent": 3},
+  "action": "prepare_buy_order",
+  "order": {"mode": "amount", "value": 100000, "currency": "KRW"},
+  "execution_mode": "manual_confirm",
+  "time_window": {"market_session": "regular", "only_before_close_minutes": 30},
+  "cooldown": {"min_days_between_triggers": 1},
+  "cancel_conditions": [{"type": "quote_stale"}],
+  "emotional_risk_flags": [],
+  "ambiguities": []
+}

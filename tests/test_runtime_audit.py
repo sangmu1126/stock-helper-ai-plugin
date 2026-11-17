@@ -185,8 +185,8 @@ def test_metrics_log_goes_to_stderr_not_stdout(runtime, monkeypatch, capsys):
     assert record["type"] == "safe_trade_metrics" and "_aws" not in record
 
 
-def test_no_cloud_sdk_imports_in_plugin_source():
-    """플러그인 소스 어디에서도 AWS SDK를 import하지 않는다."""
+def test_no_cloud_or_ai_api_sdk_imports_in_plugin_source():
+    """플러그인 소스 어디에서도 클라우드(AWS) SDK나 외부 AI API SDK를 import하지 않는다."""
     offenders = []
     for path in (ROOT / "src").rglob("*.py"):
         if "__pycache__" in path.parts:
@@ -198,7 +198,7 @@ def test_no_cloud_sdk_imports_in_plugin_source():
                 names = [alias.name for alias in node.names]
             elif isinstance(node, ast.ImportFrom) and node.module:
                 names = [node.module]
-            if any(name.split(".")[0] in {"boto3", "botocore", "aioboto3"} for name in names):
+            if any(name.split(".")[0] in {"boto3", "botocore", "aioboto3", "openai", "anthropic"} for name in names):
                 offenders.append(str(path.relative_to(ROOT)))
     assert offenders == []
     assert not (ROOT / "src" / "infra").exists()

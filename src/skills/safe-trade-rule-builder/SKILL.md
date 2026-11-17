@@ -43,22 +43,23 @@ Extract these fields when present. If a field is missing or ambiguous, keep the 
 - Execution mode: notify only or manual confirmation. Never default to live order submission.
 - Emotional risk: revenge trading, FOMO, all-in wording, urgency, or loss-recovery wording.
 
-## Parser Strategy
+## Turning the Sentence into a Rule (no external AI API)
 
-Default to `--parser auto` for production-like prototypes. The auto strategy tries the LLM parser first, validates the response with the Pydantic `ParsedRule` schema, normalizes provider-agnostic fields, then runs the safety validator. If the LLM path is unavailable because `OPENAI_API_KEY` or the OpenAI package is missing, auto falls back to the deterministic parser and records that fallback in `parser.source`, `parser.fallback_used`, and `parser.warnings`.
+You (Codex) understand the user's sentence; the scripts do not call any external AI API.
 
-Use these parser modes intentionally:
+1. Write the rule as JSON that follows the `ParsedRule` schema. Print the schema with `python scripts/rule_builder.py --print-rule-schema`; an example is in `references/rule_json_example.json`.
+2. Do not guess. If the asset, amount, trigger, or action is unclear, leave it out and add an item to `ambiguities` with the question to ask.
+3. Run `python scripts/rule_builder.py --intent "<the user's original sentence>" --rule-json -` and pass the JSON on stdin (or a file path instead of `-`). Always pass the original sentence: it is checked for prompt injection, and its explicit wording ("매수 후보", "매도 후보", "알려줘") overrides your JSON.
+4. Exit code 2 means the JSON did not match the schema. Read the message, fix the JSON, and run again.
+5. Without `--rule-json`, the offline parser (`--parser deterministic`, the default) handles common patterns. Use it for quick checks or when you cannot build the JSON.
 
-- `auto`: preferred default. LLM-first extraction with deterministic fallback.
-- `llm`: strict LLM extraction. Use when API access is configured and a failure should stop the run.
-- `deterministic`: offline parser for reproducible demos, tests, and network-restricted judging.
+When explaining output, mention the parser state before the safety decision:
 
-When explaining output, always mention the parser state before the safety decision:
-
-1. If `parser.source` is `llm`, explain that the rule was interpreted by schema-constrained LLM parsing and then validated.
-2. If `parser.source` is `deterministic_fallback`, explain that the LLM parser was unavailable or failed, so the result is a conservative fallback draft that needs closer human review.
-3. If `parser.warnings` is not empty, translate the warnings into plain language before discussing the rule.
-4. If `ambiguities` is not empty, keep the rule inactive and ask the listed questions.
+1. `parser.source` = `codex`: the rule is your JSON, validated against the schema.
+2. `parser.source` = `deterministic`: the offline parser interpreted the sentence.
+3. `parser.source` = `deterministic_fallback`: prompt injection was detected in the sentence, so your JSON was ignored and the offline parser was used. Treat the draft with extra caution.
+4. If `parser.warnings` is not empty, translate the warnings into plain language before discussing the rule.
+5. If `ambiguities` is not empty, keep the rule inactive and ask the listed questions.
 
 ## Interpreting Script Output
 
@@ -156,13 +157,13 @@ Account snapshot fields: `as_of`, `credit_loan`, `accrued_interest`, `cash`, `ho
 
 ## Script
 
-For the default LLM-first parser with deterministic fallback, run:
+With rule JSON written by Codex (preferred inside Codex):
 
 ```powershell
-python src\skills\safe-trade-rule-builder\scripts\rule_builder.py --intent "카카오 3% 떨어지면 사줘" --parser auto
+Get-Content rule.json | python src\skills\safe-trade-rule-builder\scripts\rule_builder.py --intent "카카오 3% 떨어지면 10만원만 매수 후보로 알려줘" --rule-json -
 ```
 
-For a reproducible offline parser demo, run:
+With the offline parser only (default):
 
 ```powershell
 python src\skills\safe-trade-rule-builder\scripts\rule_builder.py --intent "카카오 3% 떨어지면 사줘" --parser deterministic

@@ -19,11 +19,12 @@ from margin_guard import (
     render_margin_markdown,
 )
 from report_renderer import render_markdown_report
+from rule_json import RuleJsonError, rule_json_schema
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--intent", required=True, help="Natural-language trade intent.")
+    parser.add_argument("--intent", help="Natural-language trade intent (required unless --print-rule-schema).")
     parser.add_argument(
         "--provider",
         default="yfinance",
@@ -32,9 +33,19 @@ def main() -> int:
     )
     parser.add_argument(
         "--parser",
-        default="auto",
-        choices=["auto", "llm", "deterministic"],
-        help="Parser strategy. auto uses LLM first and falls back to deterministic parsing.",
+        default="deterministic",
+        choices=["deterministic"],
+        help="Offline parser used when no --rule-json is given.",
+    )
+    parser.add_argument(
+        "--rule-json",
+        help="Rule JSON written by Codex from the user's sentence (file path, or - for stdin). "
+        "Validated against the ParsedRule schema; see --print-rule-schema.",
+    )
+    parser.add_argument(
+        "--print-rule-schema",
+        action="store_true",
+        help="Print the ParsedRule JSON schema that --rule-json must follow, then exit.",
     )
     parser.add_argument(
         "--with-market-data",
@@ -79,6 +90,19 @@ def main() -> int:
             stream.reconfigure(encoding="utf-8")
         except (AttributeError, ValueError):
             pass
+    if args.print_rule_schema:
+        print(json.dumps(rule_json_schema(), ensure_ascii=False, indent=2))
+        return 0
+    if not args.intent:
+        parser.error("--intent is required")
+    rule_payload = None
+    if args.rule_json:
+        try:
+            raw = sys.stdin.read() if args.rule_json == "-" else Path(args.rule_json).read_text(encoding="utf-8")
+            rule_payload = json.loads(raw)
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"rule JSON could not be read: {exc}", file=sys.stderr)
+            return 2
     account = load_account(args.account) if args.account else None
 
     # 담보비율 알림·반대매매 질문은 종목 룰이 아니므로 신용거래 가드로 보낸다.
@@ -103,16 +127,21 @@ def main() -> int:
             print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
 
-    draft = build_rule(
-        args.intent,
-        provider_name=args.provider,
-        with_market_data=args.with_market_data,
-        backtest=args.backtest,
-        backtest_period=args.backtest_period,
-        backtest_interval=args.backtest_interval,
-        parser_strategy=args.parser,
-        margin_account=account,
-    )
+    try:
+        draft = build_rule(
+            args.intent,
+            provider_name=args.provider,
+            with_market_data=args.with_market_data,
+            backtest=args.backtest,
+            backtest_period=args.backtest_period,
+            backtest_interval=args.backtest_interval,
+            parser_strategy=args.parser,
+            margin_account=account,
+            rule_payload=rule_payload,
+        )
+    except RuleJsonError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
     if args.format == "markdown":
         print(render_markdown_report(draft, locale=args.locale))
     else:

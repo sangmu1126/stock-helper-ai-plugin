@@ -18,6 +18,7 @@ from market_data import get_provider
 from models import MarketDataProvider, MarketQuote, RuleDraft
 from parser_strategy import parse_intent
 from policy_engine import evaluate_policy
+from rule_json import parse_rule_payload
 from session_window import apply_time_window
 from templates import runtime_files, runtime_handler_template
 
@@ -30,10 +31,12 @@ def build_rule(
     backtest: bool = False,
     backtest_period: str = "6mo",
     backtest_interval: str = "1d",
-    parser_strategy: str = "auto",
+    parser_strategy: str = "deterministic",
     margin_account: MarginAccount | None = None,
+    rule_payload: dict[str, Any] | None = None,
 ) -> RuleDraft:
-    parsed = parse_intent(intent, parser_strategy)
+    # Codex가 문장을 룰 JSON으로 만들어 넘기면 그것을 검증해 쓰고, 없으면 오프라인 파서로 해석한다.
+    parsed = parse_rule_payload(rule_payload, intent) if rule_payload is not None else parse_intent(intent, parser_strategy)
     parts = parsed.to_legacy_dicts()
     asset = parts["asset"]
     action = parts["action"]
