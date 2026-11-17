@@ -13,7 +13,7 @@ Runtime decision flow:
 1. Load policy rules from `policy_rules.json` (or a local override path).
 2. Normalize broker health and account-limit inputs through provider contracts.
 3. Fail closed on broker, exchange, quote freshness, account limit, duplicate-order, and unsupported action checks.
-4. Evaluate the trigger in `evaluation.py`.
+4. Evaluate the trigger in `evaluation.py`, then the rule's session and time window in `market_sessions.py`.
 5. Combine policy, trigger status, idempotency, and cooldown in `decision_engine.py`.
 6. Append each evaluation's immutable decision log and return a confirmation checklist.
 
@@ -33,12 +33,23 @@ Files:
 - `policy_engine.py`, `policy_rules.json`, `risk_controls.py`, `risk_limits.json`, `prompt_security.py`, `prompt_security_rules.json`, `config_provider.py`
 - `decision_engine.py`, `decision_log.py`, `confirmation.py`, `ux_classifier.py`, `error_taxonomy.py`, `response_schema.py`, `redaction.py`, `observability.py`
 - `config.py`, `store_factory.py`, `state_store.py`, `decision_log_store.py`
+- `market_sessions.py`, `market_sessions.json` (shared with the investor skill)
 
 Smoke test:
 
 ```powershell
 python -X utf8 -c "import json, sys; sys.path.insert(0, 'src/runtime'); import runtime_handler as h; event=json.load(open('src/runtime/sample_event.json', encoding='utf-8')); print(h.handle_event(event)['decision'])"
 ```
+
+## Sessions and time windows
+
+`rule.time_window` in the event may set `market_session` (`regular` or `after_hours`) and conditions such as `only_before_close_minutes`, `exclude_open_minutes`, `exclude_morning`, or `requires_consecutive_days`. They are checked in the stock's market local time (KRX = Asia/Seoul, US = America/New_York, so US DST is handled). A MATCHED trigger that fails the window becomes `WAIT` with a `TIME_WINDOW_*` reason.
+
+`market_sessions.json` holds the session hours with sources: KRX regular 09:00–15:30, KRX after-market 16:00–20:00 (from 2026-09-14), US regular 09:30–16:00 ET, exchange holidays, and exchange special days. On 2026-11-19 (suneung day) the KRX regular session is 10:00–16:30 and the after-market 17:00–20:00; on NYSE early-close days the US regular session ends at 13:00. A session the exchange has not announced for a special day returns `SESSION_SCHEDULE_UNCONFIRMED`.
+
+Holidays come from the KRX holiday list and the NYSE calendar (2026–2027, `confirmed_through: 2027-12-31`). A time-window rule on a holiday waits with `MARKET_HOLIDAY`; a date after `confirmed_through` waits with `HOLIDAY_CALENDAR_UNCONFIRMED` until the calendar is updated. The credit guard uses the same KRX list for its business-day count. The exchange-status check also follows the session (after-hours rules accept `POST`/`AFTER_HOURS`).
+
+Price-level triggers carry a currency. A trigger in KRW evaluated against a USD quote (or the reverse) stops with `TRIGGER_CURRENCY_MISMATCH`.
 
 ## Stores
 

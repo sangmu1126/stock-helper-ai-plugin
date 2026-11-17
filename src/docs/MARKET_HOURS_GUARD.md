@@ -1,9 +1,9 @@
 # 거래시간 변경 점검기 설계
 
-문서 버전: 3.0 · 기준일: 2026-11-18 (Asia/Seoul)
-스킬: `market-hours-guard` · 구현: [src/skills/market-hours-guard](../skills/market-hours-guard/SKILL.md) · 테스트: `tests/market_hours_guard/` (저장소 루트, 제출 zip 밖)
+문서 버전: 3.1 · 기준일: 2026-11-18 (Asia/Seoul)
+스킬: `market-hours-guard` · 구현: [src/skills/market-hours-guard](../skills/market-hours-guard/SKILL.md) · 테스트: `tests/market_hours_guard/` (저장소 루트)
 상태: 기존 플러그인(`safe-trade-rule-builder`, v0.2.0)의 두 번째 스킬로 추가. MVP 구현·검증 완료 (합성 저장소 기준).
-근거: [MARKET_HOURS_EVIDENCE.md](MARKET_HOURS_EVIDENCE.md) · 이전 후보 이력: 저장소 `docs/reboot/archive/` (제출 zip 밖)
+근거: [MARKET_HOURS_EVIDENCE.md](MARKET_HOURS_EVIDENCE.md) · 이전 후보 이력: 저장소 `docs/reboot/archive/`
 
 ## 1. 한 문장
 
@@ -91,19 +91,21 @@ flowchart LR
 
 | 항목 | 수정 전 | 수정 후 |
 | --- | --- | --- |
-| 정적 스캔 | STALE 1 · DST_RISK 2 · AMBIGUOUS 1 · UNMAPPED 1 · MATCH 4 (종료 코드 1) | MATCH 12, 그중 주석 확정 11 (종료 코드 0) |
-| 경계 테스트 28건 | 7 실패 | 28 통과 |
+| 정적 스캔 | STALE 1 · DST_RISK 2 · AMBIGUOUS 1 · UNMAPPED 1 · MATCH 4 (종료 코드 1) | MATCH 16, 그중 주석 확정 15 (종료 코드 0) |
+| 경계 테스트 50건 (수능일 14건, 연말휴장일 8건 포함) | 17 실패 | 50 통과 |
 
 - 같은 `15:30`이 알림 코드에서는 MATCH(정규장 마감), 라우터에서는 STALE(과거 SOR 종료), 주문 컷오프에서는 AMBIGUOUS로 갈렸다.
 - 정적 스캔은 통과했지만 테스트가 잡은 누락이 있다. 애프터마켓 세션이 빠져 16:00에 `CLOSED`를 돌려준 경우다.
 - 미국 장 판정은 3월·7월 케이스를 통과하고 **11월 1일 서머타임 해제 이후 케이스에서만** 실패했다.
 - 가상으로 SOR 종료를 21:00으로 바꾸면 주석을 단 2곳이 MISMATCH로 자동 검출됐다(라우터 상수, `SOR_END+5m` 정산 배치).
-- 스킬 자체 테스트 40개 통과, ruff 통과.
+- **특수일(수능일, 2026-11-19 정규장 10:00~16:30, 애프터마켓 17:00~20:00)**: 평소 시각을 쓰는 세션 판정이 그날 8건 실패했다(09:00·09:59:59에 정규장으로, 15:30~16:29:59와 17:00~19:59:59에 장 종료로 판정). 정규장 이후 일정은 처음에 공지를 확인하지 못해 `confirmed_until`로 테스트에서 뺐고, 거래소 발표 보도를 확인한 뒤 넣었다.
+- **휴장일(2026-12-31 연말휴장일)**: 휴장일을 모르는 세션 판정이 09:00·15:29:59를 정규장으로 판정해 2건 실패했다. 기준표의 휴장일은 한국거래소 휴장일 조회 자료(2026·2027년)를 그대로 옮겼고, 확인 범위(`confirmed_through`) 밖 날짜는 표본으로 쓸 수 없다.
+- 스킬 자체 테스트 44개 통과, ruff 통과.
 
 ## 9. 범위 밖과 한계
 
 - 시스템 용량·성능, 거래소·SOR 제공사 장애, 실주문.
-- 정적 패턴 밖의 시각 계산(분 단위 산술), DB·원격 설정에 저장된 값, 휴장일 달력.
+- 정적 패턴 밖의 시각 계산(분 단위 산술), DB·원격 설정에 저장된 값. 휴장일은 경계 테스트에서만 확인하고, 코드에 적힌 날짜 목록을 정적으로 대조하지는 않는다.
 - 실제 KRX 세션 세부(동시호가, 시간외 종가 등)는 데모 기준표에 넣지 않았다. 실사용 기준표는 회사가 작성·승인한다.
 - 실제 카카오페이증권 저장소에서의 효과는 측정하지 않았다.
 
@@ -116,10 +118,9 @@ flowchart LR
 | `safe-trade-rule-builder` | 초보 투자자 | 감정적 매매 의도를 안전장치가 있는 룰 초안으로 |
 | `market-hours-guard` | 증권사 개발자·QA | 거래시간 제도 변경의 전산 반영 누락 |
 
-처음 추가했을 때 기존 `src/` 전체를 검사한 결과는 0건이었다. 런타임은 거래소 상태를 이벤트(`exchange_status`)로 받고 시각을 직접 계산하지 않기 때문이다. 이후 투자자용 룰 빌더에 시간 조건 판정(`config/market_sessions.json`)을 넣었고, 이 스킬로 검사하면 거래시간 값 11개가 모두 기준표와 일치한다. `tests/market_hours_guard/test_mhg_dogfood.py`가 이 상태를 지킨다.
+처음 추가했을 때 기존 `src/` 전체를 검사한 결과는 0건이었다. 런타임은 거래소 상태를 이벤트(`exchange_status`)로 받고 시각을 직접 계산하지 않기 때문이다. 이후 세션 판정을 로컬 런타임(`src/runtime/market_sessions.py`, `market_sessions.json`)으로 모아 투자자용 스킬과 함께 쓰게 했고, 애프터마켓과 수능일 일정을 넣었다. 이 스킬로 투자자용 스킬과 런타임을 검사하면 거래시간 값(정규장·애프터마켓·수능일·미국 정규장·미국 조기 폐장·오전 기준)이 모두 기준표와 일치하고, 휴장일 달력도 기준표와 같다. `tests/market_hours_guard/test_mhg_dogfood.py`가 이 상태를 지킨다.
 
 ## 11. 남은 일
 
-1. `submission.zip` 재생성: 현재 파일은 7월 버전이다.
-2. Codex 앱에서 플러그인을 설치하고 스킬을 실제로 실행해, 합성 저장소 수정 과정을 로그로 남긴다(로그·플러그인 정합성 평가 대비).
-3. 원문 재확인: [MARKET_HOURS_EVIDENCE.md](MARKET_HOURS_EVIDENCE.md)의 수치·인용을 원문과 한 번 더 대조한다.
+1. 휴장일 달력 갱신: 한국거래소·NYSE가 2028년 휴장일을 공지하면 기준표와 `market_sessions.json`에 함께 넣는다(두 파일이 같은지 테스트가 확인한다).
+2. 원문 재확인: [MARKET_HOURS_EVIDENCE.md](MARKET_HOURS_EVIDENCE.md)의 수치·인용을 원문과 한 번 더 대조한다.

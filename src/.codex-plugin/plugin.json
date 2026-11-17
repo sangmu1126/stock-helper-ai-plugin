@@ -1,7 +1,7 @@
 {
   "name": "safe-trade-rule-builder",
-  "version": "0.3.0",
-  "description": "Safe-trading plugin for KakaoPay Securities with two audiences. For in-house developers and QA (market-hours-guard): check that trading-hours changes (KRX after-market/pre-market, NXT sessions, SOR window, US DST) are applied consistently across code and config, and generate boundary-time tests. For investors (safe-trade-rule-builder): compute forced-liquidation (반대매매) deadlines and required deposits for credit trading, and turn natural-language trade requests into safe, manually confirmed rule drafts.",
+  "version": "0.4.0",
+  "description": "Safe-trading plugin for KakaoPay Securities that runs entirely locally (no cloud, no external AI API). In-house: market-hours-guard checks that trading-hours changes (after-market, SOR window, US DST, exchange special days) are applied consistently across code and config; margin-rule-check verifies counseling scripts, notices, configs, and calculation code against the official collateral rules. Investors: safe-trade-rule-builder computes forced-liquidation deadlines and required deposits and turns trade requests into safe, manually confirmed rule drafts.",
   "author": {
     "name": "AX Hackathon Team"
   },
@@ -9,8 +9,8 @@
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "KakaoPay Securities Safe Trade",
-    "shortDescription": "개발자에게는 거래시간 변경 점검, 투자자에게는 반대매매·안전 매매 점검.",
-    "longDescription": "Two skills in one plugin. market-hours-guard (in-house developers and QA): compares time values scattered across brokerage code and config with an approved session calendar, flags stale, DST-unsafe, or ambiguous values, lets Codex fix them with traceable annotations, and generates boundary-time tests. safe-trade-rule-builder (investors): checks credit-trading collateral ratios against KakaoPay Securities' published rules (140% maintenance, 120% emergency, D+1/D+2, temporary grace) with sources, and converts natural-language buy or sell requests into explainable rule drafts with time-window checks, policy guardrails, and manual confirmation. No live orders.",
+    "shortDescription": "사내에는 거래시간·신용 규칙 점검, 투자자에게는 반대매매·안전 매매 점검.",
+    "longDescription": "Three skills in one plugin, all deterministic and local. market-hours-guard (in-house developers/QA): compares time values in brokerage code and config with an approved session calendar including exchange special days, flags stale, DST-unsafe, or ambiguous values, and generates boundary-time tests. margin-rule-check (in-house counseling quality/QA/developers): finds wrong collateral-ratio and forced-liquidation statements in scripts, notices, and configs, and generates rule-conformance tests for calculation code. safe-trade-rule-builder (investors): checks credit-trading collateral ratios against KakaoPay Securities' published rules with sources, and converts trade requests (structured by Codex as rule JSON) into explainable drafts with session and time-window checks, policy guardrails, and manual confirmation. No live orders.",
     "developerName": "AX Hackathon Team",
     "category": "Productivity",
     "capabilities": [
@@ -18,10 +18,10 @@
       "Write"
     ],
     "defaultPrompt": [
-      "SOR 적용 시간이 20:00까지 늘어난 변경이 이 저장소에 빠짐없이 반영됐는지 점검하고 경계 테스트까지 만들어줘.",
-      "미국 서머타임 해제 후 한국시간 고정값이 남아 있는지 찾아서 고쳐줘.",
+      "SOR 적용 시간이 20:00까지 늘어난 변경과 수능일 시간 변경이 이 저장소에 빠짐없이 반영됐는지 점검해줘.",
+      "상담 스크립트와 앱 설정에 담보비율·반대매매 안내가 규칙과 다르게 적힌 곳이 있는지 찾아줘.",
       "담보비율 120%만 맞추면 반대매매 안 되지?",
-      "삼성전자가 3% 떨어지면 신용으로 100만원어치 매수 후보로 알려줘."
+      "테슬라가 200달러 아래로 내려가면 알려줘."
     ]
   }
 }
