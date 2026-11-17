@@ -69,6 +69,7 @@ python scripts/mhg.py gen-tests --calendar market_hours.toml --out tests/market_
 ```
 
 - 생성된 `tests/market_hours/mhg_adapter.py`의 `PROBES`를 저장소의 실제 함수에 연결한다. 각 함수는 한국시간 aware `datetime`을 받아 probe의 `expect` 형식(문자열·bool 등)을 돌려줘야 한다. 연결할 함수가 없으면 `"skip"`과 이유를 남긴다.
+- **Java·Kotlin 저장소**는 JUnit 5로 만든다: `python scripts/mhg.py gen-tests --calendar market_hours.toml --out src/test/java/<패키지 경로> --format junit --java-package <패키지>`. `MarketHoursBoundaryTest.java`(케이스 내장, junit-jupiter만 필요)와 `MhgAdapter.java`가 생긴다. `MhgAdapter.PROBES`에 `OffsetDateTime`을 받는 메서드를 연결하고(`String.valueOf(결과)`가 expect와 같아야 함), 없는 동작은 `SKIP`에 넣는다. `gradle test`로 실행한다. 생성 파일은 ASCII만 쓴다.
 - 저장소의 테스트 명령으로 실행한다(예: `python -m pytest tests/market_hours -q`).
 - 실패하면 기대값과 실제값, 경계 시각(예: 서머타임 해제 후 23:29:59)을 근거로 코드를 고친다. 기준표 쪽이 틀렸다고 판단되면 고치지 말고 사용자에게 알린다.
 
@@ -88,9 +89,14 @@ CI에 넣으려면 `scan`(실패 시 종료 코드 1)과 생성된 테스트를 
 
 ## 시연
 
-`examples/toy-broker/`는 일부러 변경을 누락한 합성 저장소(실제 회사 코드 아님)이고, `examples/toy-broker-fixed/`는 수정 후 기대 상태다.
+`examples/toy-broker/`는 일부러 변경을 누락한 합성 저장소(실제 회사 코드 아님)이고, `examples/toy-broker-fixed/`는 수정 후 기대 상태다. 같은 내용의 Java판(Gradle 프로젝트)이 `examples/toy-broker-java/`, `examples/toy-broker-java-fixed/`에 있다.
 사용자가 시연을 요청하면 `examples/toy-broker`를 임시 폴더에 복사해 위 작업 순서를 그대로 수행한다(원본 예제는 수정하지 않는다).
 
 ## 범위 밖
 
 시스템 용량·성능 테스트, 거래소·SOR 제공사 장애 원인 분석, 실주문, 코드에 적힌 휴장일 목록의 정적 대조(휴장일은 경계 테스트로만 확인), DB·원격 설정 서버에 저장된 값.
+
+판정을 보고할 때 주의할 점(공개 저장소 평가에서 확인, `src/docs/MARKET_HOURS_REAL_REPOS.md`):
+- MATCH는 "기준표에 있는 값"이라는 뜻이지 의미까지 맞다는 뜻이 아니다. 일본 장 09:00처럼 값만 같은 경우가 있으니, 고칠 대상의 MATCH도 문맥을 읽고 `mhg:` 주석으로 의미를 고정한다.
+- 1MB를 넘는 파일은 읽지 않는다. 출력의 `검사하지 않은 파일` 목록을 사용자에게 그대로 알린다.
+- 주변에 거래 관련 단어가 없는 시각(예: `if t <= "090000"`)은 보고하지 않을 수 있다.

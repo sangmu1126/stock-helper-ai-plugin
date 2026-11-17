@@ -15,6 +15,8 @@ description: 사내용(상담 품질·QA·개발자) 신용거래 규칙 점검.
 python scripts/margin_rule_check.py lint --repo <점검할 폴더> --out mrc-output
 ```
 
+읽는 파일: md·txt·html·csv, json·yaml·properties·toml 설정, 코드(py·kt·java·ts·js), **Word(.docx)**. Word는 본문과 표의 문단을 읽고 위치를 `파일:문단 번호`로 알려 준다(머리글·바닥글·메모는 읽지 않음). 읽을 수 없는 .docx는 REVIEW로 남긴다. .doc·.hwp·PDF는 읽지 않으므로, 그런 문서가 있으면 사용자에게 텍스트나 .docx로 내보내 달라고 한다.
+
 | 상태 | 뜻 | 조치 |
 | --- | --- | --- |
 | MISCONCEPTION | 140% 미만인 값으로 "반대매매 없음/안전"이라고 안내 | 반드시 고친다. 140% 미만은 담보부족, 120%는 긴급 기준이라는 사실로 바꾼다 |
@@ -37,15 +39,16 @@ python scripts/margin_rule_check.py gen-tests --out <저장소>/tests/margin_rul
 - 담보비율 경계(150/149.9/140/139.9/130/129.9/120/119.9), 담보부족·긴급 반대매매 날짜(주말과 한국거래소 휴장일 건너뜀, 성탄절·연말 포함), 한시 유예 판정(회차·구간·기간) 21건을 만든다.
 - 기대값은 투자자용 스킬의 계산 모듈(`margin_guard.py`)이 규칙 파일로 계산한다.
 - 생성된 `mrc_adapter.py`에 회사 함수 3개(`classify_ratio`, `liquidation_date`, `grace_status`)를 연결하고 pytest를 돌린다. 연결하지 않으면 실패, 해당 기능이 없으면 `"skip"`.
+- **Java·Kotlin 계산 코드**는 `--format junit --java-package <패키지>`로 JUnit 5 테스트(`MarginRuleTest.java`, 케이스 내장)와 `MrcAdapter.java`를 만든다. 어댑터의 `classifyRatio`, `liquidationDate`, `graceStatus`에 메서드 참조를 연결하고, 없는 기능은 `SKIP`에 넣는다.
 
 ## 시연
 
-`examples/support-docs/`(잘못된 상담 스크립트·앱 설정)와 `examples/toy-margin-service/`(규칙과 어긋난 계산 모듈)는 가상 자료다. `*-fixed/`가 고친 상태다.
+`examples/support-docs/`(잘못된 상담 스크립트·앱 설정)와 `examples/toy-margin-service/`(규칙과 어긋난 계산 모듈)는 가상 자료다. `toy-margin-service-java/`는 같은 계산 모듈의 Java판(Gradle)이다. `*-fixed/`가 고친 상태다.
 
 | 대상 | 수정 전 | 수정 후 |
 | --- | --- | --- |
 | 문구·설정 lint | 고칠 것 5 (잘못된 "안전" 안내 2, 유지비율 130%, D+3 반대매매, 반대매매 3영업일 설정) | 0 |
-| 계산 로직 테스트 21건 | 9 실패 | 21 통과 |
+| 계산 로직 테스트 21건 (pytest·JUnit 같음) | 9 실패 | 21 통과 |
 
 ## 범위 밖
 
