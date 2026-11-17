@@ -32,6 +32,7 @@ description: 증권사 거래시간 제도 변경(KRX 애프터마켓·프리마
 - 없으면 `assets/calendar.demo.toml`을 복사해 시작하되, 값은 사용자가 준 공지로 채우고 데모 값(`DEMO` 출처)은 지운다.
 - 제도 변경을 반영할 때: 바뀌는 경계를 `[[retired]]`로 옮기고(`replaced_by`, `retired_on`, `source`), 새 값을 `[[boundary]]`에 둔다. 동작 계약은 `[[probe]]`에 적는다. 형식은 `references/calendar-format.md` 참고.
 - 수능일처럼 거래소가 특정 날짜의 시간을 바꾸면 `[[special_day]]`와 날짜가 붙은 probe 구간(`dates`, `exclude_dates`)으로 적는다. 공지되지 않은 시간대는 `confirmed_until`로 테스트에서 뺀다.
+- 휴장일은 `[holidays.<시장>]`에 거래소 공지 그대로 적고(`confirmed_through` 필수), probe에 `market`을 달면 그 시장의 휴장일 표본에서 평소 경계가 모두 `default`인지 검사한다.
 
 ```bash
 python scripts/mhg.py check-calendar --calendar market_hours.toml
@@ -92,4 +93,4 @@ CI에 넣으려면 `scan`(실패 시 종료 코드 1)과 생성된 테스트를 
 
 ## 범위 밖
 
-시스템 용량·성능 테스트, 거래소·SOR 제공사 장애 원인 분석, 실주문, 휴장일 달력 관리(MVP), DB·원격 설정 서버에 저장된 값.
+시스템 용량·성능 테스트, 거래소·SOR 제공사 장애 원인 분석, 실주문, 코드에 적힌 휴장일 목록의 정적 대조(휴장일은 경계 테스트로만 확인), DB·원격 설정 서버에 저장된 값.

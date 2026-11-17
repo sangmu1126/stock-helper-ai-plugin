@@ -224,3 +224,19 @@ def test_margin_check_cli_exit_codes():
     assert _cli(SCRIPTS / "margin_check.py", "assess", "--account", EXAMPLES / "shortfall_round2.json").returncode == 1
     bad = _cli(SCRIPTS / "margin_check.py", "assess", "--account", EXAMPLES / "missing.json")
     assert bad.returncode == 2
+
+
+def test_timeline_skips_krx_holidays():
+    """연말: 12/30(수) 담보부족 → D+1 납부 기한은 1/4(월), D+2 반대매매는 1/5(화). 12/31 연말휴장일·1/1 신정 제외."""
+    result = assess_account(account(135_000_000, shortfall_date="2026-12-30", as_of="2026-12-30"), RULES)
+    timeline = result["timeline"]
+    assert (timeline["deposit_deadline"], timeline["liquidation_date"]) == ("2027-01-04", "2027-01-05")
+    assert timeline["skipped_holidays"] == ["2026-12-31", "2027-01-01"]
+    assert any("휴장일 2026-12-31, 2027-01-01" in line for line in result["explanation"])
+    assert "KRX_HOLIDAYS" in {s["id"] for s in result["sources"]}
+
+
+def test_timeline_beyond_holiday_calendar_warns():
+    result = assess_account(account(115_000_000, as_of="2027-12-30"), RULES)  # 긴급 → D+1, 12/31 휴장 → 2028-01-03
+    assert result["timeline"]["liquidation_date"] == "2028-01-03"
+    assert any("2027-12-31까지만 확인" in w for w in result["warnings"])

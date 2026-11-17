@@ -1,7 +1,8 @@
 """룰의 세션·시간 조건 판정 (로컬 런타임과 스킬이 함께 쓴다).
 
 - 세션: 정규장(regular), 애프터마켓(after_hours). 종목 시장(KRX·미국)의 현지 시각으로 판정한다.
-- 특수일: 수능일처럼 거래소가 시간을 바꾼 날은 그날의 시각을 쓴다. 공지되지 않은 세션은 통과시키지 않는다.
+- 특수일: 수능일·미국 조기 폐장처럼 거래소가 시간을 바꾼 날은 그날의 시각을 쓴다. 공지되지 않은 세션은 통과시키지 않는다.
+- 휴장일: 거래소가 공지한 휴장일 달력(확인 범위 confirmed_through 포함)을 쓴다. 휴장일과 확인 범위 밖 날짜는 WAIT.
 - 조건: 장 초반 제외, 오전 제외, 마감 N분 전에만, N일 연속(단일 시세로 확인 불가 → WAIT).
 
 시간 조건이 없는 정규장 룰은 판정하지 않는다(기존 동작 유지). 외부 서비스에 접속하지 않는다.
@@ -61,6 +62,30 @@ def _shift(value: time, minutes: int) -> time:
     return time(total // 60, total % 60)
 
 
+def market_holidays(market: str, sessions: dict[str, Any] | None = None) -> tuple[frozenset[date], date | None]:
+    """거래소 휴장일과 달력 확인 범위의 끝(없으면 None)."""
+    calendar = (sessions or load_sessions())["markets"][market].get("holidays")
+    if not calendar:
+        return frozenset(), None
+    days = frozenset(date.fromisoformat(d) for d in calendar["days"])
+    return days, date.fromisoformat(calendar["confirmed_through"])
+
+
+def day_status(market_spec: dict[str, Any], day: date) -> dict[str, Any]:
+    """그날이 거래일인지. status: TRADING_DAY / WEEKEND / HOLIDAY / UNCONFIRMED(휴장일 달력 확인 범위 밖)."""
+    if day.weekday() >= 5:
+        return {"status": "WEEKEND"}
+    calendar = market_spec.get("holidays")
+    if not calendar:
+        return {"status": "TRADING_DAY"}
+    name = calendar["days"].get(day.isoformat())
+    if name:
+        return {"status": "HOLIDAY", "name": name, "source": calendar["source"]}
+    if day > date.fromisoformat(calendar["confirmed_through"]):
+        return {"status": "UNCONFIRMED", "confirmed_through": calendar["confirmed_through"]}
+    return {"status": "TRADING_DAY"}
+
+
 def session_hours(market_spec: dict[str, Any], session: str, day: date) -> dict[str, Any]:
     """그날의 세션 시각. status: OK / NOT_AVAILABLE(없는 세션·시행 전) / UNCONFIRMED(특수일 미공지)."""
     special = next((s for s in market_spec.get("special_days", []) if s["date"] == day.isoformat()), None)
@@ -100,6 +125,14 @@ def evaluate_time_window(time_window: dict[str, Any], symbol: str, at: datetime,
         return {"status": "WAIT", "reason": reason, "message": message, "details": details}
 
     label = SESSION_LABEL.get(session, session)
+    day = day_status(spec, local.date())
+    if day["status"] == "HOLIDAY":
+        details["holiday"] = day["name"]
+        return wait("MARKET_HOLIDAY", f"{local.date()}은 {market} 휴장일({day['name']})입니다.")
+    if day["status"] == "UNCONFIRMED":
+        return wait("HOLIDAY_CALENDAR_UNCONFIRMED",
+                    f"{market} 휴장일 달력은 {day['confirmed_through']}까지만 확인됐습니다. "
+                    "거래소 공지로 달력을 갱신하기 전에는 판정하지 않습니다.")
     if hours["status"] == "UNCONFIRMED":
         return wait("SESSION_SCHEDULE_UNCONFIRMED",
                     f"{hours['special_day']['name']}의 {label} 시간은 거래소 공지로 확인되지 않아 판정하지 않습니다.")

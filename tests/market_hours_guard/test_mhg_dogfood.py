@@ -15,5 +15,5 @@ def test_investor_skill_and_runtime_time_values_all_match_calendar(calendar):
     not_matching = [(f.status, f.path, f.line, f.found) for f in findings if f.status != "MATCH"]
     assert not_matching == []
     found = {f.found for f in findings}
-    # 정규장·애프터마켓·수능일·미국 정규장·오전 기준이 실제로 검사되었는지
-    assert {"09:00", "15:30", "16:00", "20:00", "10:00", "16:30", "09:30", "12:00"} <= found
+    # 정규장·애프터마켓·수능일(정규장·애프터마켓)·미국 정규장·미국 조기 폐장·오전 기준이 실제로 검사되었는지
+    assert {"09:00", "15:30", "16:00", "20:00", "10:00", "16:30", "17:00", "09:30", "13:00", "12:00"} <= found

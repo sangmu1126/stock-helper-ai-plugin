@@ -3,6 +3,7 @@
 각 구간 [start, end)의 경계마다 '1초 전'과 '정각'을 만들고, 기준표로 기대값을 계산한다.
 외국 시간대 probe(예: 미국 정규장)는 표본 날짜마다 현지(한국) 시각으로 환산하므로
 서머타임 전환 전후의 차이가 테스트에 그대로 드러난다.
+특수일(수능일 등)에는 그날의 구간과 함께 빠진 평소 경계를, 휴장일에는 평소 경계 전부를 검사한다.
 """
 
 from __future__ import annotations
@@ -79,8 +80,11 @@ def build_cases(cal: Calendar) -> list[dict]:
         for day in probe.sample_dates:
             windows = sorted((w for w in probe.windows if w.applies(day)), key=lambda w: w.start)
             special = cal.special_day(day)
+            holiday = cal.holiday(probe.market, day)
             # 특수일에 적용이 빠진 평소 구간의 경계도 검사한다(예: 수능일 09:00에는 아직 정규장이 아님).
             moved = [w for w in probe.windows if day in w.exclude_dates]
+            if holiday:  # 휴장일에는 평소 구간이 모두 빠진다. 평소 경계 시각에 전부 default여야 한다.
+                windows, moved = [], windows
             points: dict[datetime, str] = {}
             for w, suffix in [(w, "") for w in windows] + [(w, " (평소 경계)") for w in moved]:
                 for edge, edge_name in ((w.start, "시작"), (w.end, "종료")):
@@ -101,7 +105,8 @@ def build_cases(cal: Calendar) -> list[dict]:
                     "at": local.isoformat(),
                     "probe_time": f"{local_in_probe.strftime('%Y-%m-%d %H:%M:%S')} {local_in_probe.tzname()}",
                     "expect": expect,
-                    "why": (f"[{special.name}] " if special else "") + f"{probe.description or probe.id}: {points[at]} → {where}",
+                    "why": (f"[{special.name}] " if special else "") + (f"[휴장일 {holiday}] " if holiday else "")
+                           + f"{probe.description or probe.id}: {points[at]} → {where}",
                 })
     return cases
 

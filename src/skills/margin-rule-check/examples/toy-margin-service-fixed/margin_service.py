@@ -5,6 +5,8 @@ MAINTENANCE_RATIO = 140
 EMERGENCY_RATIO = 120
 WATCH_RATIO = 150
 GRACE_FROM, GRACE_TO = date(2026, 11, 9), date(2027, 2, 5)
+# 한국거래소 휴장일 공지(2026-11-18 조회) 중 시연 기간분. 실제 서비스는 거래소 달력을 받아 쓴다.
+KRX_HOLIDAYS = {date(2026, 12, 25), date(2026, 12, 31), date(2027, 1, 1)}
 
 
 def classify(ratio):
@@ -21,7 +23,7 @@ def _add_business_days(start, days):
     current, added = start, 0
     while added < days:
         current += timedelta(days=1)
-        if current.weekday() < 5:
+        if current.weekday() < 5 and current not in KRX_HOLIDAYS:
             added += 1
     return current
 

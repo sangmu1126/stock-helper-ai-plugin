@@ -100,8 +100,8 @@ def test_lint_cli_exit_codes(tmp_path, folder, code):
 
 
 @pytest.mark.parametrize("folder, ok, summary", [
-    ("toy-margin-service", False, "6 failed, 11 passed"),
-    ("toy-margin-service-fixed", True, "17 passed"),
+    ("toy-margin-service", False, "9 failed, 12 passed"),
+    ("toy-margin-service-fixed", True, "21 passed"),
 ])
 def test_generated_logic_tests_against_examples(tmp_path, folder, ok, summary):
     target = tmp_path / folder

@@ -108,6 +108,14 @@ def test_sessions_match_market_hours_guard_calendar():
     csat = next(s for s in krx["special_days"] if s["id"] == "CSAT_2026")
     assert csat["sessions"]["regular"]["open"] == boundaries["KRX_REGULAR_OPEN_CSAT_2026"]["time"]
     assert csat["sessions"]["regular"]["close"] == boundaries["KRX_REGULAR_CLOSE_CSAT_2026"]["time"]
+    assert csat["sessions"]["after_hours"]["open"] == boundaries["KRX_AFTER_OPEN_CSAT_2026"]["time"]
+    assert csat["sessions"]["after_hours"]["close"] == boundaries["KRX_AFTER_CLOSE"]["time"]
+    early = {s["sessions"]["regular"]["close"] for s in us["special_days"]}
+    assert early == {boundaries["US_EARLY_CLOSE"]["time"]}
+    calendar = tomllib.loads(calendar_path.read_text(encoding="utf-8"))["holidays"]
+    for market in ("KRX", "US"):  # 휴장일 달력도 기준표와 같아야 한다
+        assert markets[market]["holidays"]["days"] == calendar[market]["days"]
+        assert markets[market]["holidays"]["confirmed_through"] == calendar[market]["confirmed_through"].isoformat()
     assert krx["morning_end"] == boundaries["MORNING_END"]["time"]
     assert us["sessions"]["regular"]["open"] == boundaries["US_REGULAR_OPEN"]["time"]
     assert us["sessions"]["regular"]["close"] == boundaries["US_REGULAR_CLOSE"]["time"]
@@ -140,12 +148,53 @@ def test_us_has_no_after_hours_session_configured():
     ({"only_before_close_minutes": 30}, kst(2026, 11, 19, 16, 10), "OK", "TIME_WINDOW_SATISFIED"),
     ({"exclude_open_minutes": 10}, kst(2026, 11, 19, 9, 30), "WAIT", "OUTSIDE_SESSION"),               # 아직 개장 전
     ({"exclude_open_minutes": 10}, kst(2026, 11, 19, 10, 5), "WAIT", "WITHIN_OPENING_EXCLUSION"),
-    ({"market_session": "after_hours"}, kst(2026, 11, 19, 17, 0), "WAIT", "SESSION_SCHEDULE_UNCONFIRMED"),
+    ({"market_session": "after_hours"}, kst(2026, 11, 19, 16, 45), "WAIT", "OUTSIDE_SESSION"),         # 평소면 애프터마켓
+    ({"market_session": "after_hours"}, kst(2026, 11, 19, 17, 0), "OK", "TIME_WINDOW_SATISFIED"),
 ])
 def test_suneung_day_shifts_regular_session(window, at, status, reason):
     result = evaluate_time_window(window, "005930.KS", at)
     assert (result["status"], result["reason"]) == (status, reason)
     assert result["details"].get("special_day") == "2027학년도 수능일"
+
+
+# ── 휴장일·조기 폐장 ───────────────────────────────────────
+
+
+@pytest.mark.parametrize("symbol, at, reason, holiday", [
+    ("005930.KS", kst(2026, 12, 31, 10, 0), "MARKET_HOLIDAY", "연말휴장일"),
+    ("005930.KS", kst(2027, 5, 3, 10, 0), "MARKET_HOLIDAY", "노동절(대체휴일)"),
+    ("TSLA", datetime(2026, 11, 26, 10, 0, tzinfo=ET), "MARKET_HOLIDAY", "Thanksgiving Day"),
+    ("005930.KS", kst(2028, 1, 4, 10, 0), "HOLIDAY_CALENDAR_UNCONFIRMED", None),  # 공지된 달력 범위 밖
+])
+def test_holidays_hold_time_window_rules(symbol, at, reason, holiday):
+    result = evaluate_time_window({"exclude_open_minutes": 10}, symbol, at)
+    assert (result["status"], result["reason"]) == ("WAIT", reason)
+    assert result["details"].get("holiday") == holiday
+
+
+def test_trading_day_before_holiday_is_normal():
+    result = evaluate_time_window({"only_before_close_minutes": 30}, "005930.KS", kst(2026, 12, 30, 15, 10))
+    assert result["status"] == "OK"
+
+
+@pytest.mark.parametrize("at, status, reason", [
+    (datetime(2026, 11, 27, 12, 40, tzinfo=ET), "OK", "TIME_WINDOW_SATISFIED"),      # 13:00 조기 폐장 30분 전
+    (datetime(2026, 11, 27, 13, 30, tzinfo=ET), "WAIT", "OUTSIDE_SESSION"),          # 평소라면 장중
+    (datetime(2026, 11, 30, 15, 40, tzinfo=ET), "OK", "TIME_WINDOW_SATISFIED"),      # 다음 거래일은 평소대로
+])
+def test_us_early_close(at, status, reason):
+    result = evaluate_time_window({"only_before_close_minutes": 30}, "TSLA", at)
+    assert (result["status"], result["reason"]) == (status, reason)
+
+
+def test_unannounced_special_session_is_not_guessed():
+    """특수일에 거래소가 공지하지 않은 세션은 추측하지 않고 WAIT로 둔다."""
+    sessions = load_sessions()
+    csat = sessions["markets"]["KRX"]["special_days"][0]
+    del csat["sessions"]["after_hours"]
+    csat["unconfirmed_sessions"] = ["after_hours"]
+    result = evaluate_time_window({"market_session": "after_hours"}, "005930.KS", kst(2026, 11, 19, 17, 0), sessions)
+    assert result["reason"] == "SESSION_SCHEDULE_UNCONFIRMED"
 
 
 @pytest.mark.parametrize("text, session", [

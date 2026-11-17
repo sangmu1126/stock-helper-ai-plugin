@@ -23,7 +23,7 @@ from typing import Any
 _SKILLS_DIR = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_SKILLS_DIR / "safe-trade-rule-builder" / "scripts"))
 
-from margin_guard import add_business_days, classify_ratio, evaluate_grace, load_margin_rules
+from margin_guard import add_business_days, classify_ratio, evaluate_grace, exchange_holidays, load_margin_rules
 
 SUFFIXES = {".md", ".txt", ".html", ".json", ".yaml", ".yml", ".properties", ".toml", ".py", ".kt", ".java",
             ".ts", ".tsx", ".js", ".csv"}
@@ -272,7 +272,7 @@ def test_margin_rule(case):
 _ADAPTER_TEMPLATE = '''"""신용거래 규칙 테스트 어댑터 — 회사 계산 코드를 연결한다. None이면 실패, "skip"이면 제외.
 
 classify_ratio(ratio_pct: float) -> "SAFE" | "WATCH" | "SHORTFALL" | "EMERGENCY"
-liquidation_date(clock: "SHORTFALL" | "EMERGENCY", start: date) -> date   # 주말 제외 영업일 기준
+liquidation_date(clock: "SHORTFALL" | "EMERGENCY", start: date) -> date   # 주말·한국거래소 휴장일 제외 영업일 기준
 grace_status(ratio_pct: float, shortfall_round: int | None, liquidation: date)
     -> "ELIGIBLE" | "NOT_ELIGIBLE" | "NEEDS_ROUND" | "NOT_ACTIVE"
 """
@@ -289,13 +289,19 @@ def build_cases(rules: dict[str, Any]) -> list[dict[str, Any]]:
     for ratio in (150, 149.9, 140, 139.9, 130, 129.9, 120, 119.9):
         cases.append({"id": f"classify-{ratio:g}", "kind": "classify", "args": {"ratio_pct": ratio},
                       "expect": classify_ratio(ratio, rules), "why": f"담보비율 {ratio:g}% 상태"})
+    holidays, _ = exchange_holidays()
+    # 수요일, 금요일(주말), 성탄절 전날(12/25 휴장), 연말(12/31 연말휴장일·1/1 신정)
+    starts = (date(2026, 11, 18), date(2026, 11, 20), date(2026, 12, 24), date(2026, 12, 30))
     for clock, days in (("SHORTFALL", expected["shortfall_liquidation_days"]),
                         ("EMERGENCY", expected["emergency_liquidation_days"])):
-        for start in (date(2026, 11, 18), date(2026, 11, 20)):  # 수요일, 금요일(주말을 건너뜀)
+        for start in starts:
+            end = add_business_days(start, days, holidays)
+            skipped = sorted(d.isoformat() for d in holidays if start < d <= end and d.weekday() < 5)
             cases.append({"id": f"liquidation-{clock.lower()}-{start}", "kind": "liquidation",
                           "args": {"clock": clock, "start": start.isoformat()},
-                          "expect": add_business_days(start, days).isoformat(),
-                          "why": f"{clock} 발생 {start} → D+{days} 반대매매"})
+                          "expect": end.isoformat(),
+                          "why": f"{clock} 발생 {start} → D+{days} 반대매매"
+                                 + (f" (휴장일 {', '.join(skipped)} 제외)" if skipped else "")})
     for ratio, round_, liquidation in ((135, 2, date(2026, 11, 19)), (135, 1, date(2026, 11, 19)),
                                        (125, 2, date(2026, 11, 19)), (135, None, date(2026, 11, 19)),
                                        (135, 2, date(2027, 3, 2))):

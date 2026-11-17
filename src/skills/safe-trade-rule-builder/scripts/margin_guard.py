@@ -18,6 +18,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -213,6 +214,14 @@ def load_account(path: Path) -> MarginAccount:
 # ── 계산 ────────────────────────────────────────────────────
 
 
+@lru_cache(maxsize=1)
+def exchange_holidays() -> tuple[frozenset[date], date | None]:
+    """한국거래소 휴장일과 달력 확인 범위의 끝. 런타임 세션 설정(market_sessions.json) 하나를 함께 쓴다."""
+    from runtime_bridge import load_runtime_module
+
+    return load_runtime_module("market_sessions").market_holidays("KRX")
+
+
 def add_business_days(start: date, days: int, holidays: frozenset[date] = frozenset()) -> date:
     current, added = start, 0
     while added < days:
@@ -294,6 +303,8 @@ def assess_account(account: MarginAccount, rules: dict[str, Any], *, believed_sa
     grace = None
 
     if status in ("SHORTFALL", "EMERGENCY"):
+        krx_holidays, confirmed_through = exchange_holidays()
+        holidays = krx_holidays | account.holidays
         # 120% 미만이 된 날이 있으면, 이후 일부 입금으로 120%를 넘겨도 그날 140% 회복 의무가 남는다(긴급 일정).
         emergency_clock = status == "EMERGENCY" or (
             account.emergency_date is not None and account.emergency_date <= account.as_of
@@ -301,7 +312,7 @@ def assess_account(account: MarginAccount, rules: dict[str, Any], *, believed_sa
         if emergency_clock:
             start = account.emergency_date or account.as_of
             deadline = start
-            liquidation = add_business_days(start, rules["emergency"]["liquidation_business_days"], account.holidays)
+            liquidation = add_business_days(start, rules["emergency"]["liquidation_business_days"], holidays)
             explanation.append(f"{deadline}(D) 안에 {maintenance:g}% 이상으로 채우지 않으면 {liquidation}(D+1)에 반대매매됩니다.")
             if status == "SHORTFALL":
                 explanation.append(
@@ -310,15 +321,23 @@ def assess_account(account: MarginAccount, rules: dict[str, Any], *, believed_sa
                 )
         else:
             start = account.shortfall_date or account.as_of
-            deadline = add_business_days(start, rules["shortfall"]["deposit_deadline_business_days"], account.holidays)
-            liquidation = add_business_days(start, rules["shortfall"]["liquidation_business_days"], account.holidays)
+            deadline = add_business_days(start, rules["shortfall"]["deposit_deadline_business_days"], holidays)
+            liquidation = add_business_days(start, rules["shortfall"]["liquidation_business_days"], holidays)
             explanation.append(f"{deadline}(D+1)까지 {maintenance:g}% 이상으로 채우지 않으면 {liquidation}(D+2)에 반대매매됩니다.")
+        skipped = sorted(d for d in holidays if start < d <= liquidation and d.weekday() < 5)
         timeline = {
             "clock": "EMERGENCY" if emergency_clock else "SHORTFALL",
             "shortfall_date": start.isoformat(), "deposit_deadline": deadline.isoformat(),
             "liquidation_date": liquidation.isoformat(),
-            "note": "주말과 입력한 holidays만 제외. 실제 영업일·마감 시각은 앱 안내를 따르세요.",
+            "skipped_holidays": [d.isoformat() for d in skipped],
+            "note": (f"주말과 한국거래소 휴장일({confirmed_through}까지 공지분)을 제외한 영업일 기준. "
+                     "실제 마감 시각은 앱 안내를 따르세요."),
         }
+        if skipped:
+            explanation.append(f"휴장일 {', '.join(d.isoformat() for d in skipped)}은 영업일에서 뺐습니다.")
+        if confirmed_through is None or liquidation > confirmed_through:
+            warnings.append(f"휴장일 달력은 {confirmed_through}까지만 확인돼, 그 뒤 날짜는 주말만 빼고 계산했습니다.")
+        sources.append("KRX_HOLIDAYS")
         grace = evaluate_grace(rules, ratio, account.shortfall_round, liquidation)
         if grace:
             sources.append(grace["source"])

@@ -28,7 +28,7 @@ def write(tmp_path, text):
 
 
 def test_demo_calendar_loads(calendar):
-    assert len(calendar.active) == 13
+    assert len(calendar.active) == 15
     assert [b.id for b in calendar.retired] == ["SOR_END_UNTIL_20260913"]
     assert {p.id for p in calendar.probes} == {"krx_session", "sor_enabled", "us_regular_open"}
     assert calendar.digest.startswith("sha256:")

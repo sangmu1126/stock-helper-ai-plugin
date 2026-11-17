@@ -1,11 +1,13 @@
 {
-  "version": "sessions.2026-11-18b",
-  "note": "룰의 시간 조건과 세션(정규장·애프터마켓)을 판정하는 거래시간. market-hours-guard 기준표(assets/calendar.demo.toml)와 값이 같아야 하며 테스트가 일치를 검사한다.",
+  "version": "sessions.2026-11-18c",
+  "note": "룰의 시간 조건과 세션(정규장·애프터마켓)을 판정하는 거래시간과 휴장일. market-hours-guard 기준표(assets/calendar.demo.toml)와 값이 같아야 하며 테스트가 일치를 검사한다.",
   "sources": {
     "KRX": "한국거래소 정규시장 09:00~15:30",
     "KRX_AFTER": "머니투데이 2026-09-13: KRX 애프터마켓 2026-09-14 개장, 16:00~20:00",
-    "CSAT_2026": "한국거래소 2026-11-05 발표: 2027학년도 수능일(2026-11-19) 정규장 10:00~16:30으로 1시간 순연, 프리마켓 미운영 (SBS Biz·뉴닉 보도)",
+    "KRX_HOLIDAYS": "한국거래소 휴장일 조회(open.krx.co.kr 시장정보 > 휴장일, 2026-11-18 조회): 2026년 17일, 2027년 16일",
+    "CSAT_2026": "한국거래소 2026-11-05 발표: 수능일(2026-11-19) 정규장 10:00~16:30, 애프터마켓 17:00~20:00(그 전에 장 후 시간외 종가매매) (서울경제TV·뉴스웨이·아시아경제 2026-11-05 보도)",
     "NYSE": "미국 정규장 09:30~16:00 (America/New_York, 서머타임은 시간대 규칙으로 처리)",
+    "NYSE_HOLIDAYS": "NYSE Holidays & Trading Hours (nyse.com/trade/hours-calendars, 2026-11-18 조회): 2026·2027 휴장일, 조기 폐장 13:00",
     "PRODUCT": "제품 설정 — '오전'을 정규장 시작부터 12:00까지로 정의"
   },
   "markets": {
@@ -17,11 +19,49 @@
         "regular": {"open": "09:00", "close": "15:30", "source": "KRX"},
         "after_hours": {"open": "16:00", "close": "20:00", "effective_from": "2026-09-14", "source": "KRX_AFTER"}
       },
+      "holidays": {
+        "source": "KRX_HOLIDAYS",
+        "confirmed_through": "2027-12-31",
+        "days": {
+          "2026-01-01": "신정",
+          "2026-02-16": "설날",
+          "2026-02-17": "설날",
+          "2026-02-18": "설날",
+          "2026-03-02": "삼일절(대체휴일)",
+          "2026-05-01": "근로자의날",
+          "2026-05-05": "어린이날",
+          "2026-05-25": "석가탄신일(대체휴일)",
+          "2026-06-03": "임시공휴일(전국동시지방선거)",
+          "2026-07-17": "제헌절",
+          "2026-08-17": "광복절(대체휴일)",
+          "2026-09-24": "추석",
+          "2026-09-25": "추석",
+          "2026-10-05": "개천절(대체휴일)",
+          "2026-10-09": "한글날",
+          "2026-12-25": "성탄절",
+          "2026-12-31": "연말휴장일",
+          "2027-01-01": "신정",
+          "2027-02-08": "설날",
+          "2027-02-09": "설날(대체휴일)",
+          "2027-03-01": "삼일절",
+          "2027-05-03": "노동절(대체휴일)",
+          "2027-05-05": "어린이날",
+          "2027-05-13": "석가탄신일",
+          "2027-07-19": "제헌절(대체휴일)",
+          "2027-08-16": "광복절(대체휴일)",
+          "2027-09-14": "추석",
+          "2027-09-15": "추석",
+          "2027-09-16": "추석",
+          "2027-10-04": "개천절(대체휴일)",
+          "2027-10-11": "한글날(대체휴일)",
+          "2027-12-27": "성탄절(대체휴일)",
+          "2027-12-31": "연말휴장일"
+        }
+      },
       "special_days": [
         {
           "date": "2026-11-19", "id": "CSAT_2026", "name": "2027학년도 수능일", "source": "CSAT_2026",
-          "sessions": {"regular": {"open": "10:00", "close": "16:30"}},
-          "unconfirmed_sessions": ["after_hours"]
+          "sessions": {"regular": {"open": "10:00", "close": "16:30"}, "after_hours": {"open": "17:00", "close": "20:00"}}
         }
       ]
     },
@@ -32,7 +72,40 @@
       "sessions": {
         "regular": {"open": "09:30", "close": "16:00", "source": "NYSE"}
       },
-      "special_days": []
+      "holidays": {
+        "source": "NYSE_HOLIDAYS",
+        "confirmed_through": "2027-12-31",
+        "days": {
+          "2026-01-01": "New Year's Day",
+          "2026-01-19": "Martin Luther King, Jr. Day",
+          "2026-02-16": "Washington's Birthday",
+          "2026-04-03": "Good Friday",
+          "2026-05-25": "Memorial Day",
+          "2026-06-19": "Juneteenth",
+          "2026-07-03": "Independence Day (observed)",
+          "2026-09-07": "Labor Day",
+          "2026-11-26": "Thanksgiving Day",
+          "2026-12-25": "Christmas Day",
+          "2027-01-01": "New Year's Day",
+          "2027-01-18": "Martin Luther King, Jr. Day",
+          "2027-02-15": "Washington's Birthday",
+          "2027-03-26": "Good Friday",
+          "2027-05-31": "Memorial Day",
+          "2027-06-18": "Juneteenth (observed)",
+          "2027-07-05": "Independence Day (observed)",
+          "2027-09-06": "Labor Day",
+          "2027-11-25": "Thanksgiving Day",
+          "2027-12-24": "Christmas Day (observed)"
+        }
+      },
+      "special_days": [
+        {"date": "2026-11-27", "id": "NYSE_EARLY_CLOSE_20261127", "name": "추수감사절 다음 날 조기 폐장", "source": "NYSE_HOLIDAYS",
+         "sessions": {"regular": {"open": "09:30", "close": "13:00"}}},
+        {"date": "2026-12-24", "id": "NYSE_EARLY_CLOSE_20261224", "name": "크리스마스 이브 조기 폐장", "source": "NYSE_HOLIDAYS",
+         "sessions": {"regular": {"open": "09:30", "close": "13:00"}}},
+        {"date": "2027-11-26", "id": "NYSE_EARLY_CLOSE_20271126", "name": "추수감사절 다음 날 조기 폐장", "source": "NYSE_HOLIDAYS",
+         "sessions": {"regular": {"open": "09:30", "close": "13:00"}}}
+      ]
     }
   },
   "morning_source": "PRODUCT"

@@ -35,8 +35,8 @@ def test_bad_calendar_exits_2(tmp_path, mhg_script, examples):
 
 
 @pytest.mark.parametrize("repo, expect_ok, summary", [
-    ("toy-broker", False, "13 failed, 24 passed"),
-    ("toy-broker-fixed", True, "37 passed"),
+    ("toy-broker", False, "17 failed, 33 passed"),
+    ("toy-broker-fixed", True, "50 passed"),
 ])
 def test_generated_boundary_tests(tmp_path, mhg_script, calendar_path, examples, repo, expect_ok, summary):
     target = tmp_path / repo

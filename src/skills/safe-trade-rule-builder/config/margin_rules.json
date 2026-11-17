@@ -1,5 +1,5 @@
 {
-  "version": "margin.kakaopaysec.2026-11-18",
+  "version": "margin.kakaopaysec.2026-11-18b",
   "broker": "카카오페이증권",
   "checked_on": "2026-11-18",
   "sources": {
@@ -14,6 +14,10 @@
     "ASSUMPTION": {
       "title": "공식 안내에 없는 값 — 업계 일반식 또는 제품 설정",
       "url": ""
+    },
+    "KRX_HOLIDAYS": {
+      "title": "한국거래소 휴장일 (2026-11-18 조회, 2027-12-31까지 공지) — 영업일 계산용, 값은 src/runtime/market_sessions.json",
+      "url": "https://open.krx.co.kr/contents/MKD/01/0110/01100305/MKD01100305.jsp"
     }
   },
   "thresholds": {

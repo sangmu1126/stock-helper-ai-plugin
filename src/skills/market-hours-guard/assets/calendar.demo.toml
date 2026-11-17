@@ -14,7 +14,9 @@ E5 = "머니투데이 2026-09-13: KRX 애프터마켓 2026-09-14 개장, 16:00~2
 E6 = "MTN 2026-09-14: 애프터마켓 개장으로 SOR 적용 시간이 15:30에서 20:00까지로 연장"
 E7 = "스페셜타임즈 2026-09-14: NXT 프리마켓 08:00~08:50 운영 중 장애"
 NYSE = "미국 정규장 09:30~16:00 (America/New_York, 서머타임은 시간대 규칙으로 처리)"
-CSAT_2026 = "한국거래소 2026-11-05 발표: 2027학년도 수능일(2026-11-19) 정규장 10:00~16:30, 프리마켓 미운영 (SBS Biz·뉴닉 보도)"
+CSAT_2026 = "한국거래소 2026-11-05 발표: 2027학년도 수능일(2026-11-19) 정규장 10:00~16:30, 장 후 시간외 종가 16:40~17:00, 애프터마켓 17:00~20:00, 프리마켓 미운영 (서울경제TV·뉴스웨이·아시아경제·SBS Biz 보도)"
+KRX_HOLIDAYS = "한국거래소 휴장일 조회(open.krx.co.kr 시장정보 > 휴장일, 2026-11-18 조회): 2026년 17일, 2027년 16일"
+NYSE_HOLIDAYS = "NYSE Holidays & Trading Hours (nyse.com/trade/hours-calendars, 2026-11-18 조회): 휴장일, 조기 폐장 13:00"
 DEMO = "데모 시스템 가정 — 실제 회사 규칙이 아님"
 
 [scan]
@@ -107,6 +109,14 @@ keywords = ["csat", "수능", "special"]
 source = "CSAT_2026"
 
 [[boundary]]
+id = "KRX_AFTER_OPEN_CSAT_2026"
+market = "KRX"
+time = "17:00"
+meaning = "수능일(2026-11-19) KRX 애프터마켓 시작 — 평소보다 1시간 늦음 (종료 20:00은 평소와 같음)"
+keywords = ["csat", "수능", "special"]
+source = "CSAT_2026"
+
+[[boundary]]
 id = "MORNING_END"
 market = "PRODUCT"
 time = "12:00"
@@ -132,6 +142,15 @@ meaning = "미국 정규장 마감"
 keywords = ["us", "usa", "nyse", "nasdaq", "미국", "해외", "overseas"]
 source = "NYSE"
 
+[[boundary]]
+id = "US_EARLY_CLOSE"
+market = "US"
+time = "13:00"
+tz = "America/New_York"
+meaning = "미국 정규장 조기 폐장 (추수감사절 다음 날, 크리스마스 이브 등 거래소 공지일)"
+keywords = ["early", "조기", "half", "thanksgiving", "christmas"]
+source = "NYSE_HOLIDAYS"
+
 # ── 폐기된 경계 (코드에 남아 있으면 변경 누락 의심) ──────────
 
 [[retired]]
@@ -149,9 +168,76 @@ source = "E6"
 [[special_day]]
 date = 2026-11-19
 name = "2027학년도 수능일"
-# 정규장 이후 일정(애프터마켓 등)은 공지로 확인되지 않아 이 시각부터는 경계 테스트를 만들지 않는다.
-confirmed_until = "16:30"
+# 정규장·애프터마켓 모두 공지로 확인됨. 공지되지 않은 시간대가 있으면 confirmed_until = "HH:MM"으로 그 뒤를 테스트에서 뺀다.
 source = "CSAT_2026"
+
+# ── 휴장일 (거래소 공지, 주말 제외) ──────────────────────────
+# confirmed_through 이후 날짜는 휴장 여부를 알 수 없으므로 probe 표본으로 쓸 수 없다.
+
+[holidays.KRX]
+source = "KRX_HOLIDAYS"
+confirmed_through = 2027-12-31
+
+[holidays.KRX.days]
+2026-01-01 = "신정"
+2026-02-16 = "설날"
+2026-02-17 = "설날"
+2026-02-18 = "설날"
+2026-03-02 = "삼일절(대체휴일)"
+2026-05-01 = "근로자의날"
+2026-05-05 = "어린이날"
+2026-05-25 = "석가탄신일(대체휴일)"
+2026-06-03 = "임시공휴일(전국동시지방선거)"
+2026-07-17 = "제헌절"
+2026-08-17 = "광복절(대체휴일)"
+2026-09-24 = "추석"
+2026-09-25 = "추석"
+2026-10-05 = "개천절(대체휴일)"
+2026-10-09 = "한글날"
+2026-12-25 = "성탄절"
+2026-12-31 = "연말휴장일"
+2027-01-01 = "신정"
+2027-02-08 = "설날"
+2027-02-09 = "설날(대체휴일)"
+2027-03-01 = "삼일절"
+2027-05-03 = "노동절(대체휴일)"
+2027-05-05 = "어린이날"
+2027-05-13 = "석가탄신일"
+2027-07-19 = "제헌절(대체휴일)"
+2027-08-16 = "광복절(대체휴일)"
+2027-09-14 = "추석"
+2027-09-15 = "추석"
+2027-09-16 = "추석"
+2027-10-04 = "개천절(대체휴일)"
+2027-10-11 = "한글날(대체휴일)"
+2027-12-27 = "성탄절(대체휴일)"
+2027-12-31 = "연말휴장일"
+
+[holidays.US]
+source = "NYSE_HOLIDAYS"
+confirmed_through = 2027-12-31
+
+[holidays.US.days]
+2026-01-01 = "New Year's Day"
+2026-01-19 = "Martin Luther King, Jr. Day"
+2026-02-16 = "Washington's Birthday"
+2026-04-03 = "Good Friday"
+2026-05-25 = "Memorial Day"
+2026-06-19 = "Juneteenth"
+2026-07-03 = "Independence Day (observed)"
+2026-09-07 = "Labor Day"
+2026-11-26 = "Thanksgiving Day"
+2026-12-25 = "Christmas Day"
+2027-01-01 = "New Year's Day"
+2027-01-18 = "Martin Luther King, Jr. Day"
+2027-02-15 = "Washington's Birthday"
+2027-03-26 = "Good Friday"
+2027-05-31 = "Memorial Day"
+2027-06-18 = "Juneteenth (observed)"
+2027-07-05 = "Independence Day (observed)"
+2027-09-06 = "Labor Day"
+2027-11-25 = "Thanksgiving Day"
+2027-12-24 = "Christmas Day (observed)"
 
 # ── 경계 테스트 probe (데모 시스템의 동작 계약) ─────────────
 
@@ -159,8 +245,10 @@ source = "CSAT_2026"
 id = "krx_session"
 description = "KRX 세션 판정"
 tz = "Asia/Seoul"
+market = "KRX"
 default = "CLOSED"
-sample_dates = [2026-11-18, 2026-11-19]
+# 평일(11/18), 수능일(11/19), 연말휴장일(12/31)
+sample_dates = [2026-11-18, 2026-11-19, 2026-12-31]
 
   [[probe.window]]
   start = "09:00"
@@ -184,6 +272,13 @@ sample_dates = [2026-11-18, 2026-11-19]
   exclude_dates = [2026-11-19]
   source = "E5"
 
+  [[probe.window]]
+  start = "17:00"
+  end = "20:00"
+  expect = "AFTER"
+  dates = [2026-11-19]
+  source = "CSAT_2026"
+
 [[probe]]
 id = "sor_enabled"
 description = "SOR 라우팅 적용 여부"
@@ -202,6 +297,7 @@ sample_dates = [2026-11-18]
 id = "us_regular_open"
 description = "미국 정규장 개장 여부"
 tz = "America/New_York"
+market = "US"
 default = false
 # 서머타임 중(7/15), 시작 직후(3/9), 해제 직후(11/2), 해제 후(11/18)
 sample_dates = [2026-03-09, 2026-07-15, 2026-11-02, 2026-11-18]

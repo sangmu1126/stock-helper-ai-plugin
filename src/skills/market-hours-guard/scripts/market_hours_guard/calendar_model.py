@@ -82,6 +82,16 @@ class SpecialDay:
 
 
 @dataclass(frozen=True)
+class HolidayCalendar:
+    """거래소가 공지한 휴장일. confirmed_through 이후 날짜는 휴장 여부를 알 수 없다."""
+
+    market: str
+    source: str
+    confirmed_through: date
+    days: dict[date, str]
+
+
+@dataclass(frozen=True)
 class Probe:
     """경계 테스트 대상 동작. 시각을 넣으면 기대값(expect)이 나와야 한다."""
 
@@ -91,6 +101,7 @@ class Probe:
     default: Any
     windows: tuple[Window, ...]
     sample_dates: tuple[date, ...]
+    market: str | None = None  # 휴장일 달력을 적용할 시장 (없으면 휴장일을 보지 않음)
 
 
 @dataclass(frozen=True)
@@ -105,9 +116,15 @@ class Calendar:
     sources: dict[str, str]
     digest: str
     special_days: tuple[SpecialDay, ...] = ()
+    holidays: dict[str, HolidayCalendar] | None = None
 
     def special_day(self, day: date) -> SpecialDay | None:
         return next((s for s in self.special_days if s.date == day), None)
+
+    def holiday(self, market: str | None, day: date) -> str | None:
+        """그 시장의 휴장일이면 이름, 아니면 None."""
+        calendar = (self.holidays or {}).get(market or "")
+        return calendar.days.get(day) if calendar else None
 
     @property
     def active(self) -> tuple[Boundary, ...]:
@@ -279,7 +296,35 @@ def _probe(item: dict, local_tz: str, sources: dict[str, str], where: str,
         default=item.get("default"),
         windows=tuple(windows),
         sample_dates=tuple(sample_dates),
+        market=str(item["market"]) if item.get("market") else None,
     )
+
+
+def _holidays(data: dict, sources: dict[str, str], problems: list[str]) -> dict[str, HolidayCalendar]:
+    result: dict[str, HolidayCalendar] = {}
+    raw_all = data.get("holidays", {})
+    if not isinstance(raw_all, dict):
+        problems.append("[holidays.<시장>] 형식이어야 합니다")
+        return result
+    for market, raw in raw_all.items():
+        where = f"holidays.{market}"
+        source = _check_source(raw, where, sources, problems)
+        through = _as_date(raw.get("confirmed_through"), f"{where}.confirmed_through", problems)
+        if through is None:
+            problems.append(f"{where}: confirmed_through(달력을 확인한 마지막 날짜)가 필요합니다")
+        days: dict[date, str] = {}
+        for key, name in (raw.get("days") or {}).items():
+            day = _as_date(key, f"{where}.days", problems)
+            if day is None:
+                continue
+            if not is_weekday(day):
+                problems.append(f"{where}.days: {day}는 주말입니다 (주말은 적지 않습니다)")
+            if through and day > through:
+                problems.append(f"{where}.days: {day}가 confirmed_through({through}) 뒤입니다")
+            days[day] = str(name)
+        if through:
+            result[str(market)] = HolidayCalendar(market=str(market), source=source, confirmed_through=through, days=days)
+    return result
 
 
 def load_calendar(path: str | Path) -> Calendar:
@@ -335,6 +380,18 @@ def load_calendar(path: str | Path) -> Calendar:
         if day:
             special_days.append(SpecialDay(date=day, name=str(raw.get("name", "")), source=source, confirmed_until=until))
 
+    holidays = _holidays(data, sources, problems)
+    for probe in probes:
+        calendar = holidays.get(probe.market or "")
+        if calendar is None:
+            continue  # 휴장일 달력이 없는 시장은 주말만 본다
+        for day in probe.sample_dates:
+            if day > calendar.confirmed_through:
+                problems.append(f"probe {probe.id}: {day}는 {probe.market} 휴장일 달력 확인 범위"
+                                f"({calendar.confirmed_through}) 밖이라 기대값을 정할 수 없습니다")
+            elif day in calendar.days and any(day in w.dates for w in probe.windows):
+                problems.append(f"probe {probe.id}: {day}는 휴장일({calendar.days[day]})인데 그날 전용 구간이 있습니다")
+
     scan = data.get("scan", {})
     extra = scan.get("context_keywords", [])
     if not isinstance(extra, list) or not all(isinstance(k, str) for k in extra):
@@ -358,4 +415,5 @@ def load_calendar(path: str | Path) -> Calendar:
         sources=sources,
         digest="sha256:" + hashlib.sha256(raw_bytes).hexdigest()[:16],
         special_days=tuple(special_days),
+        holidays=holidays,
     )
