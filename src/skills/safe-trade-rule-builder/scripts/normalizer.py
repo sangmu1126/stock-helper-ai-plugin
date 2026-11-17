@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from asset_catalog import symbol_aliases
 from schema import ParsedRule
 
 ASSET_SYMBOL_ALIASES = {
+    **symbol_aliases(),
     "카카오": "035720.KS",
     "kakao": "035720.KS",
     "035720.KQ": "035720.KS",

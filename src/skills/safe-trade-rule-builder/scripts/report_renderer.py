@@ -442,6 +442,10 @@ def _trigger_status_ko(draft: RuleDraft) -> str:
     reason = draft.trigger_evaluation.get("reason")
     if status == "MATCHED":
         return "조건은 충족됐지만 다음 단계는 자동 주문이 아니라 수동 확인 또는 알림입니다."
+    window = draft.trigger_evaluation.get("time_window") or {}
+    if status == "WAIT" and window.get("status") == "WAIT":
+        details = window.get("details", {})
+        return f"대기. 시간 조건 미충족 — {window.get('message')} (현지 {details.get('local_time')}, `{reason}`)"
     if status == "WAIT":
         return f"대기. {reason}"
     return f"중단. {reason}"

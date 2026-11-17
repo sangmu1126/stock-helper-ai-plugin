@@ -2,11 +2,7 @@ from __future__ import annotations
 
 import re
 
-SYMBOLS = {
-    "카카오페이": {"symbol": "377300.KS", "name": "Kakao Pay"},
-    "카카오": {"symbol": "035720.KS", "name": "Kakao Corp"},
-    "삼성전자": {"symbol": "005930.KS", "name": "Samsung Electronics"},
-}
+from asset_catalog import find_asset
 
 EMOTIONAL_PATTERNS = {
     "revenge_or_recovery": ["복구", "만회", "손실 메꾸", "본전"],
@@ -17,14 +13,7 @@ EMOTIONAL_PATTERNS = {
 
 
 def detect_asset(intent: str) -> dict[str, str]:
-    code_match = re.search(r"\b(\d{6})(?:\.KS)?\b", intent)
-    if code_match:
-        symbol = f"{code_match.group(1)}.KS"
-        return {"symbol": symbol, "name": symbol}
-    for keyword, asset in SYMBOLS.items():
-        if keyword in intent:
-            return asset
-    return {"symbol": "UNKNOWN", "name": "Unknown asset"}
+    return find_asset(intent) or {"symbol": "UNKNOWN", "name": "Unknown asset"}
 
 
 def detect_percent(intent: str) -> float | None:
@@ -152,16 +141,19 @@ def detect_order(intent: str) -> dict[str, object]:
     return {"mode": "required_before_activation"}
 
 
+_AMOUNT_RE = re.compile(r"(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)\s*(억|천만|백만|만)?\s*원")
+_AMOUNT_UNITS = {None: 1, "만": 10_000, "백만": 1_000_000, "천만": 10_000_000, "억": 100_000_000}
+# 금액 뒤에 이런 말이 오면 주문 금액이 아니라 가격 조건이다: "4만원 아래로", "55000원 되면", "4만원에 사줘"
+_PRICE_CONTEXT_RE = re.compile(r"^\s*(?:아래|이하|미만|밑|위|이상|초과|넘|돌파|도달|되면|선|대|에\s)")
+
+
 def detect_amount_krw(intent: str) -> float | None:
-    match = re.search(r"(\d+(?:\.\d+)?)\s*만\s*원\s*만", intent)
-    if match:
-        return float(match.group(1)) * 10000
-    match = re.search(r"(\d+(?:\.\d+)?)\s*만\s*원\s*(?:어치|만큼)", intent)
-    if match:
-        return float(match.group(1)) * 10000
-    match = re.search(r"(\d{4,})\s*원\s*만", intent)
-    if match:
-        return float(match.group(1))
+    """주문 금액(원). '10만원만', '50만원어치', '100만원 매수', '1,000,000원', '1억원'."""
+    for match in _AMOUNT_RE.finditer(intent):
+        if _PRICE_CONTEXT_RE.match(intent[match.end():]):
+            continue
+        number = float(match.group(1).replace(",", ""))
+        return number * _AMOUNT_UNITS[match.group(2)]
     return None
 
 

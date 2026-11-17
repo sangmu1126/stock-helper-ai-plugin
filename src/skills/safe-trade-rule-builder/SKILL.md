@@ -32,7 +32,7 @@ Use this skill to design the decision process, not to predict a correct trade. T
 
 Extract these fields when present. If a field is missing or ambiguous, keep the rule inactive and ask a blocking question.
 
-- Asset: company name or direct ticker such as `035720` or `035720.KS`.
+- Asset: company name or direct ticker such as `035720`, `035720.KS`, `086520.KQ`, or a US ticker such as `TSLA`. The offline parser knows common Korean and US names (`scripts/asset_catalog.py`, e.g. SK하이닉스, 네이버, 에코프로, 테슬라, 애플); otherwise ask for the 6-digit code or ticker.
 - Action: prepare buy, prepare sell, notify only, or block order.
 - Price reference: previous close, current price, average purchase price, fixed KRW price, recent high, or moving average.
 - Trigger: percent drop/rise, price cross above/below, recent-high drawdown, moving-average break, or volatility move.
@@ -68,7 +68,7 @@ Read the JSON in this order and explain it to the user in the same order:
 2. `asset`, `trigger`, `action`, `execution_mode`: explain what mechanical rule was extracted from the user's sentence.
 3. `emotional_risk_flags`: if any flags exist, say the rule should not be activated yet. Explain the exact phrase that triggered the flag and ask the user to rewrite the rule in calmer, bounded terms.
 4. `market_data.health`: if `ok` is false, stop. Explain that the data provider failed or returned incomplete data, so the rule cannot be evaluated safely.
-5. `trigger_evaluation`: treat `STOP` as a hard stop, `WAIT` as "condition not met or not enough support to act", and `MATCHED` as "eligible for manual confirmation only".
+5. `trigger_evaluation`: treat `STOP` as a hard stop, `WAIT` as "condition not met or not enough support to act", and `MATCHED` as "eligible for manual confirmation only". If `trigger_evaluation.time_window` is present, the rule's time conditions (장 초반 제외, 오전 제외, 장 마감 N분 전) were checked in the stock's own market time (KRX = Asia/Seoul, US = America/New_York, so US DST is handled). A `TIME_WINDOW_*` reason means the price condition may be met but the time condition is not; explain `time_window.message` and the local time. "N일 연속" conditions cannot be verified from one quote and are held as `WAIT`.
 6. `policy_result`: explain whether policy allowed the rule, required clarification, or blocked it. Policy decisions override trigger matches.
 7. `decision_result`: explain the final orchestrated decision. Treat `BLOCK` and `REQUIRE_CLARIFICATION` as non-activation outcomes.
 8. `decision_log`: mention that the decision is auditable through `decision_id`, `rule_id`, policy version, parser version, and market snapshot. Do not expose private user identifiers.

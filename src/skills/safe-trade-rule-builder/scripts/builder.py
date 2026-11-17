@@ -18,6 +18,7 @@ from market_data import get_provider
 from models import MarketDataProvider, MarketQuote, RuleDraft
 from parser_strategy import parse_intent
 from policy_engine import evaluate_policy
+from session_window import apply_time_window
 from templates import lambda_template, runtime_files
 
 
@@ -67,6 +68,8 @@ def build_rule(
             quote = provider.get_quote(asset["symbol"], lookback_days=lookback_days)
             market_data = asdict(quote)
             trigger_evaluation = evaluate_trigger(trigger, quote)
+            # "장 마감 30분 전에만" 같은 시간 조건은 가격 조건과 별도로 종목 시장의 현지 시각으로 판정한다.
+            trigger_evaluation = apply_time_window(trigger_evaluation, time_window, asset["symbol"], quote.timestamp)
         except Exception as exc:  # noqa: BLE001 - fail closed for market-data adapters
             market_data = {
                 "provider": provider_name,
