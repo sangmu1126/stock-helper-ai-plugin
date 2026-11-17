@@ -19,7 +19,7 @@ from models import MarketDataProvider, MarketQuote, RuleDraft
 from parser_strategy import parse_intent
 from policy_engine import evaluate_policy
 from session_window import apply_time_window
-from templates import lambda_template, runtime_files
+from templates import runtime_files, runtime_handler_template
 
 
 def build_rule(
@@ -184,8 +184,8 @@ def build_rule(
         health_checks=build_health_checks(provider_name),
         emotional_risk_flags=emotional_flags,
         persuasion_process=build_persuasion_process(action, asset),
-        serverless_shape=build_serverless_shape(provider_name),
-        lambda_handler=lambda_template(),
+        runtime_shape=build_runtime_shape(provider_name),
+        runtime_handler=runtime_handler_template(),
         runtime_files=runtime_files(),
         policy_result=policy_result,
         decision_result=decision_result,
@@ -275,23 +275,25 @@ def build_persuasion_process(action: str, asset: dict[str, str]) -> list[dict[st
     ]
 
 
-def build_serverless_shape(provider_name: str) -> dict[str, str]:
+def build_runtime_shape(provider_name: str) -> dict[str, str]:
+    """룰을 평가하는 로컬 런타임의 구성. 외부 클라우드 서비스를 쓰지 않는다."""
     return {
-        "runtime": "AWS Lambda compatible Python",
-        "runtime_file": "./runtime/lambda_handler.py",
+        "runtime": "Local Python runtime (standard library only)",
+        "runtime_file": "./runtime/runtime_handler.py",
+        "entry_point": "runtime_handler.handle_event(event) -> decision object",
         "runtime_support_files": "./runtime/evaluation.py, ./runtime/event_context.py, ./runtime/policy_engine.py, ./runtime/decision_engine.py, ./runtime/store_factory.py, ./runtime/state_store.py, ./runtime/decision_log.py, ./runtime/decision_log_store.py, ./runtime/confirmation.py, ./runtime/providers.py, ./runtime/policy_rules.json",
         "sample_event": "./runtime/sample_event.json",
-        "trigger": "EventBridge schedule or broker/quote webhook",
+        "trigger": "Called with a rule event that includes quote, broker health, and account snapshot",
         "market_data_provider": provider_name,
         "provider_contract": "MarketDataProvider.get_quote(symbol, lookback_days=20) -> MarketQuote",
         "broker_provider_contract": "BrokerProvider.get_health() -> BrokerHealthSnapshot",
         "account_provider_contract": "AccountProvider.get_snapshot() -> AccountSnapshot",
         "history_contract": "MarketDataProvider.get_history(symbol, period, interval) -> historical bars",
-        "state": "DynamoDB table for cooldowns and fired rule ids",
-        "decision_log_store": "DynamoDB table or append-only audit sink for immutable decision logs",
+        "state": "In-memory store by default; SAFE_TRADE_STATE_BACKEND=file keeps idempotency and cooldown in a local JSON file",
+        "decision_log_store": "In-memory by default; SAFE_TRADE_DECISION_LOG_BACKEND=file appends immutable decision logs to a local JSONL file",
         "policy_rules": "./runtime/policy_rules.json",
-        "secrets": "Broker credentials stored outside code, for example in Secrets Manager",
-        "output": "STOP, WAIT, NOTIFY_ONLY, or MANUAL_CONFIRM decision object",
+        "secrets": "Broker credentials stay outside code (environment variables); none are required for the prototype",
+        "output": "STOP, WAIT, NOTIFY_ONLY, MANUAL_CONFIRM, REQUIRE_CLARIFICATION, or BLOCK decision object",
         "backtest": "Historical trigger simulation using provider.get_history()",
     }
 

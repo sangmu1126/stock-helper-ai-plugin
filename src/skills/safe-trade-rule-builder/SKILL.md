@@ -1,6 +1,6 @@
 ---
 name: safe-trade-rule-builder
-description: Convert beginner investors' natural-language buy or sell intent into explainable, mechanical, serverless trading-rule drafts with risk guardrails. Use when the user asks to turn phrases like "buy Kakao if it falls 3%" into rule JSON, Lambda-style code, pre-trade health checks, circuit breakers, or a persuasion process that helps a novice understand whether to buy, sell, wait, or revise the rule without receiving direct investment advice. Also use for credit/margin trading (신용, 빚투, 담보비율, 반대매매): pre-trade forced-liquidation thresholds, collateral shortfall deadlines and required deposit, the 2026-11 temporary grace rule, and collateral-ratio alerts.
+description: Convert beginner investors' natural-language buy or sell intent into explainable, mechanical trading-rule drafts with risk guardrails, evaluated by a local runtime. Use when the user asks to turn phrases like "buy Kakao if it falls 3%" into rule JSON, runtime evaluation code, pre-trade health checks, circuit breakers, or a persuasion process that helps a novice understand whether to buy, sell, wait, or revise the rule without receiving direct investment advice. Also use for credit/margin trading (신용, 빚투, 담보비율, 반대매매): pre-trade forced-liquidation thresholds, collateral shortfall deadlines and required deposit, the 2026-11 temporary grace rule, and collateral-ratio alerts.
 ---
 
 # Safe Trade Rule Builder
@@ -25,7 +25,7 @@ Use this skill to design the decision process, not to predict a correct trade. T
 5. Produce a decision narrative with three branches: proceed to manual confirmation, wait, or reject the rule.
 6. If the user requests live market context, use `--with-market-data` to fetch quote data through the configured provider and evaluate whether the trigger is currently met.
 7. If the user asks for backtesting or rule safety validation, use `--backtest` to fetch historical bars and simulate how often the trigger would have fired.
-8. Generate serverless pseudocode or Lambda-style Python that evaluates the rule and returns a structured decision without live execution.
+8. Show how the local runtime (`src/runtime/runtime_handler.py`, `handle_event(event)`) evaluates the rule and returns a structured decision without live execution. Everything runs on the user's machine; no cloud account is needed.
 9. End with user-facing questions that resolve missing assumptions.
 
 ## Parsed Rule Dimensions
@@ -204,8 +204,8 @@ The script can emit JSON or a markdown report containing:
 - safety warnings such as no events, too many events, or high-volatility periods
 - emotional-risk flags
 - pre-trade health checks
-- serverless deployment shape
-- deployable Lambda runtime reference at `src/runtime/lambda_handler.py`
+- local runtime shape (`runtime_shape`)
+- local runtime reference at `src/runtime/runtime_handler.py` (`handle_event(event)`)
 - policy and decision orchestration outputs
 - immutable decision-log preview
 - confirmation checklist for user consent
@@ -214,7 +214,7 @@ The script can emit JSON or a markdown report containing:
 Runtime smoke test:
 
 ```powershell
-python -X utf8 -c "import json, importlib.util; spec=importlib.util.spec_from_file_location('lh','src/runtime/lambda_handler.py'); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m); event=json.load(open('src/runtime/sample_event.json', encoding='utf-8')); print(m.lambda_handler(event, None))"
+python -X utf8 -c "import json, sys; sys.path.insert(0, 'src/runtime'); import runtime_handler as h; event=json.load(open('src/runtime/sample_event.json', encoding='utf-8')); print(h.handle_event(event)['decision'])"
 ```
 
 The market-data adapter is intentionally isolated behind `MarketDataProvider.get_quote(symbol) -> MarketQuote` and `MarketDataProvider.get_history(symbol, period, interval)`. Replace the `yfinance` provider with `kakaopay-securities` when an approved KakaoPay Securities API is available.

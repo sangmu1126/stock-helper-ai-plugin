@@ -1,23 +1,22 @@
-"""AWS Lambda handler for safe trading-rule evaluation.
+"""Local runtime handler for safe trading-rule evaluation.
 
 This runtime does not place orders. It validates policy, broker/account health,
 market state, quote freshness, trigger status, idempotency, and confirmation
-requirements before returning a decision object.
+requirements before returning a decision object. It runs entirely on the local
+machine: state and audit logs use in-memory (default) or local-file stores.
 """
 from __future__ import annotations
 
-import json
 import sys
 import time
 from pathlib import Path
 from typing import Any
 
-# Ensure runtime directory is on sys.path for Lambda packaging.
+# Ensure the runtime directory is importable when this file is loaded directly.
 _RUNTIME_DIR = Path(__file__).resolve().parent
 if str(_RUNTIME_DIR) not in sys.path:
     sys.path.insert(0, str(_RUNTIME_DIR))
 
-import auth as _AUTH
 import config as _CONFIG
 import confirmation as _CONFIRMATION
 import decision_engine as _DECISION
@@ -37,32 +36,15 @@ from evaluation import (
     evaluate_trigger,
     quote_age_status,
 )
+from state_store import DuplicateStateRecordError
 
 
-def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    is_api_gateway = "httpMethod" in event or "routeKey" in event or ("requestContext" in event and "http" in event.get("requestContext", {}))
+def handle_event(event: dict[str, Any]) -> dict[str, Any]:
+    """Evaluate one rule event and return a decision. Fails closed with STOP on any internal error."""
     try:
-        if is_api_gateway:
-            auth_rejection, user_id = _AUTH.validate_api_gateway_auth(event)
-            if auth_rejection:
-                return auth_rejection
-            body = event.get("body", "{}")
-            payload = json.loads(body) if isinstance(body, str) else body
-            payload["user_id"] = user_id
-        else:
-            payload = event
-
-        response_payload = _handle_event(payload, context)
-        
-        if is_api_gateway:
-            return {
-                "statusCode": 200,
-                "headers": {"Content-Type": "application/json"},
-                "body": json.dumps(response_payload, ensure_ascii=False),
-            }
-        return response_payload
+        return _handle_event(event)
     except Exception as exc:  # noqa: BLE001 - top-level fail-closed boundary
-        error_payload = _RESPONSE.envelope({
+        return _RESPONSE.envelope({
             "decision": "STOP",
             "reasons": ["INTERNAL_ERROR"],
             "errors": _ERRORS.describe_reasons(["INTERNAL_ERROR"]),
@@ -70,16 +52,9 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             "user_action": "시스템 내부 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
             "internal_error": f"{type(exc).__name__}: {exc}",
         })
-        if is_api_gateway:
-            return {
-                "statusCode": 500,
-                "headers": {"Content-Type": "application/json"},
-                "body": json.dumps(error_payload, ensure_ascii=False),
-            }
-        return error_payload
 
 
-def _handle_event(event: dict[str, Any], context: Any) -> dict[str, Any]:
+def _handle_event(event: dict[str, Any]) -> dict[str, Any]:
     trace = _OBSERVABILITY.start_trace(event)
     runtime_event = _EVENT_CONTEXT.RuntimeEvent.from_event(event)
     runtime_config = _CONFIG.load_runtime_config().to_dict()
@@ -173,14 +148,18 @@ def _handle_event(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 decision_result_dict.get("fire_rule_id"),
                 now=now,
                 user_id=str(event.get("user_id", "anonymous")),
-                decision_log=decision_log
             )
-        except _STORE_FACTORY.DuplicateStateRecordError:
+        except DuplicateStateRecordError:
             decision_result_dict["decision"] = "WAIT"
             decision_result_dict["reasons"] = ["DUPLICATE_DECISION_BLOCKED"]
             decision_result_dict["is_new_decision"] = False
+            decision_result_dict["confirmation_required"] = False
+            decision_result_dict["fire_rule_id"] = None
             decision_log["decision"] = "WAIT"
             decision_log["reasons"] = ("DUPLICATE_DECISION_BLOCKED",)
+            decision_log["confirmation_required"] = False
+
+    log_store.append(decision_log)
 
     decision_result = decision_result_dict
 
@@ -220,10 +199,7 @@ def _handle_event(event: dict[str, Any], context: Any) -> dict[str, Any]:
     if missing_fields:
         response["schema_validation_errors"] = missing_fields
 
-    _OBSERVABILITY.emit_emf_metrics(response["trace"], response["metrics"])
-    if decision_result.get("is_new_decision"):
-        _OBSERVABILITY.emit_async_decision_event(decision_log)
-    
+    _OBSERVABILITY.emit_metrics_log(response["trace"], response["metrics"])
     return response
 
 

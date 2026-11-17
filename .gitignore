@@ -8,3 +8,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .aws-sam/
+# AWS 리소스 삭제 전 백업(계정 데이터)은 저장소에 올리지 않는다
+docs/reboot/archive/aws/backup-*/
+# market-hours-guard 스캔 결과
+mhg-output/

@@ -9,7 +9,7 @@ from pathlib import Path
 REQUIRED_PATHS = [
     Path("src/.codex-plugin/plugin.json"),
     Path("src/skills/safe-trade-rule-builder/SKILL.md"),
-    Path("src/runtime/lambda_handler.py"),
+    Path("src/runtime/runtime_handler.py"),
     Path("src/runtime/evaluation.py"),
     Path("README.md"),
     Path("logs"),

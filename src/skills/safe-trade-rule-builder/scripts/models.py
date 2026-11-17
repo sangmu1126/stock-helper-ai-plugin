@@ -45,8 +45,8 @@ class RuleDraft:
     health_checks: list[dict[str, Any]]
     emotional_risk_flags: list[dict[str, str]]
     persuasion_process: list[dict[str, str]]
-    serverless_shape: dict[str, Any]
-    lambda_handler: str
+    runtime_shape: dict[str, Any]
+    runtime_handler: str
     runtime_files: dict[str, str]
     policy_result: dict[str, Any]
     decision_result: dict[str, Any]

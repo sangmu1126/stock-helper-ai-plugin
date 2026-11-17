@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI for generating safe serverless trading-rule drafts."""
+"""CLI for generating safe trading-rule drafts evaluated by the local runtime."""
 from __future__ import annotations
 
 import argparse

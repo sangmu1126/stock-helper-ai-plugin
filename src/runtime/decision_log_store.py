@@ -1,9 +1,17 @@
+"""결정 감사 로그 저장소 (append-only).
+
+- InMemoryDecisionLogStore: 기본값. 프로세스 메모리에만 저장한다.
+- FileDecisionLogStore: 로컬 JSONL 파일에 한 줄씩 추가한다.
+
+외부 클라우드 저장소는 쓰지 않는다.
+"""
 from __future__ import annotations
 
 import json
-from decimal import Decimal
 from pathlib import Path
 from typing import Any
+
+from decision_log import stable_id
 
 
 class InMemoryDecisionLogStore:
@@ -19,62 +27,12 @@ class InMemoryDecisionLogStore:
             "entry_count": len(self.entries),
         }
 
-    def query_user_decisions(self, user_id: str, limit: int = 50, exclusive_start_key: dict[str, Any] | None = None) -> dict[str, Any]:
-        # Simple mock implementation for in-memory
-        results = [entry for entry in self.entries if entry.get("user_id") == user_id]
-        results.sort(key=lambda x: x.get("created_at", 0), reverse=True)
-        return {
-            "items": results[:limit],
-            "last_evaluated_key": None
-        }
-
-
-class DynamoDBDecisionLogStore:
-    def __init__(self, table_name: str, *, table: object | None = None) -> None:
-        self.table_name = table_name
-        self.table = table or _load_boto3_table(table_name)
-
-    def append(self, decision_log: dict[str, Any]) -> None:
-        self.table.put_item(
-            Item=_to_dynamodb_safe(decision_log),
-            ConditionExpression="attribute_not_exists(decision_id)",
-        )
-
-    def snapshot(self) -> dict[str, Any]:
-        return {
-            "store": "DynamoDBDecisionLogStore",
-            "table_name": self.table_name,
-            "implemented": True,
-        }
-
-    def query_user_decisions(self, user_id: str, limit: int = 50, exclusive_start_key: dict[str, Any] | None = None) -> dict[str, Any]:
-        from boto3.dynamodb.conditions import Key  # type: ignore[import-not-found]
-        kwargs = {
-            "IndexName": "user-decisions-index",
-            "KeyConditionExpression": Key("user_id").eq(user_id),
-            "ScanIndexForward": False,
-            "Limit": limit,
-        }
-        if exclusive_start_key:
-            kwargs["ExclusiveStartKey"] = exclusive_start_key
-
-        response = self.table.query(**kwargs)
-        return {
-            "items": list(response.get("Items", [])),
-            "last_evaluated_key": response.get("LastEvaluatedKey"),
-        }
-
-
-def _load_boto3_table(table_name: str) -> object:
-    try:
-        import boto3  # type: ignore[import-not-found]
-    except ImportError as exc:
-        raise RuntimeError("boto3 is required for DynamoDBDecisionLogStore.") from exc
-    return boto3.resource("dynamodb").Table(table_name)
+    def query_user_decisions(self, user_id: str, limit: int = 50) -> dict[str, Any]:
+        return _query(self.entries, user_id, limit)
 
 
 class FileDecisionLogStore:
-    """Append-only local store for tests and single-node prototypes."""
+    """로컬 JSONL 파일에 결정을 한 줄씩 추가한다."""
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
@@ -95,29 +53,19 @@ class FileDecisionLogStore:
         return entries
 
     def snapshot(self) -> dict[str, Any]:
-        entries = self.read_all()
         return {
             "store": "FileDecisionLogStore",
             "path": str(self.path),
-            "entry_count": len(entries),
+            "entry_count": len(self.read_all()),
         }
 
-    def query_user_decisions(self, user_id: str, limit: int = 50, exclusive_start_key: dict[str, Any] | None = None) -> dict[str, Any]:
-        results = [entry for entry in self.read_all() if entry.get("user_id") == user_id]
-        results.sort(key=lambda x: x.get("created_at", 0), reverse=True)
-        return {
-            "items": results[:limit],
-            "last_evaluated_key": None
-        }
+    def query_user_decisions(self, user_id: str, limit: int = 50) -> dict[str, Any]:
+        return _query(self.read_all(), user_id, limit)
 
 
-def _to_dynamodb_safe(value: Any) -> Any:
-    if isinstance(value, float):
-        return Decimal(str(value))
-    if isinstance(value, tuple):
-        return [_to_dynamodb_safe(item) for item in value]
-    if isinstance(value, list):
-        return [_to_dynamodb_safe(item) for item in value]
-    if isinstance(value, dict):
-        return {str(key): _to_dynamodb_safe(item) for key, item in value.items()}
-    return value
+def _query(entries: list[dict[str, Any]], user_id: str, limit: int) -> dict[str, Any]:
+    """사용자 ID는 해시로만 비교한다(원문 ID를 로그에 남기지 않는다)."""
+    user_hash = stable_id(user_id)
+    results = [entry for entry in entries if entry.get("user_id_hash") == user_hash]
+    results.sort(key=lambda entry: str(entry.get("created_at", "")), reverse=True)
+    return {"items": results[:limit]}

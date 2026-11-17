@@ -9,5 +9,4 @@ StateStore = _MOD.StateStore
 DuplicateStateRecordError = _MOD.DuplicateStateRecordError
 InMemoryStateStore = _MOD.InMemoryStateStore
 FileStateStore = _MOD.FileStateStore
-DynamoDBStateStore = _MOD.DynamoDBStateStore
 now_seconds = _MOD.now_seconds

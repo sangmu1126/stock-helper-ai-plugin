@@ -21,14 +21,14 @@ Default source:
 Runtime override sources:
 
 - Local file path: `SAFE_TRADE_POLICY_CONFIG_PATH`, `SAFE_TRADE_RISK_LIMITS_PATH`, `SAFE_TRADE_PROMPT_SECURITY_CONFIG_PATH`
-- AWS SSM Parameter Store: `SAFE_TRADE_POLICY_SSM_PARAMETER`, `SAFE_TRADE_RISK_SSM_PARAMETER`, `SAFE_TRADE_PROMPT_SECURITY_SSM_PARAMETER`
-- AWS AppConfig: `SAFE_TRADE_CONFIG_BACKEND=appconfig` with application, environment, and profile identifiers
+
+All sources are local files. The runtime does not call any external configuration service.
 
 ## Fallback Rules
 
-- If the selected provider fails, the runtime falls back to packaged local config.
-- If the selected JSON is malformed, the runtime falls back to packaged defaults.
-- Config is cached with `SAFE_TRADE_CONFIG_TTL_SECONDS` to avoid external provider calls on every Lambda invoke.
+- If the override file is missing, the runtime uses the packaged local config.
+- If the selected JSON is malformed, the runtime falls back to packaged defaults and records the error.
+- Config is cached with `SAFE_TRADE_CONFIG_TTL_SECONDS`; editing the file takes effect after the TTL expires, without restarting.
 
 ## Audit Metadata
 

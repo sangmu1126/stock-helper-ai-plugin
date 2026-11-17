@@ -1,2 +1,2 @@
-# Runtime currently relies only on the Python standard library plus boto3 from
-# the AWS Lambda Python runtime when DynamoDB backends are enabled.
+# The runtime uses only the Python standard library.
+# It runs locally; state and audit logs use in-memory (default) or local-file stores.

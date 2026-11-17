@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 
-def lambda_template() -> str:
-    return runtime_file("lambda_handler.py")
+def runtime_handler_template() -> str:
+    return runtime_file("runtime_handler.py")
 
 
 def runtime_files() -> dict[str, str]:

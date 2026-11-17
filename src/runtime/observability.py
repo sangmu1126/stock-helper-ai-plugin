@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
 import time
 import uuid
 from typing import Any
@@ -36,48 +38,21 @@ def metrics(*, decision: str, reasons: list[str], policy_decision: str) -> dict[
     }
 
 
-def emit_emf_metrics(trace: dict[str, Any], metrics_data: dict[str, Any]) -> None:
-    now_ms = int(time.time() * 1000)
-    emf = {
-        "_aws": {
-            "Timestamp": now_ms,
-            "CloudWatchMetrics": [
-                {
-                    "Namespace": "KakaoPay/SafeTrade",
-                    "Dimensions": [["Decision"]],
-                    "Metrics": [
-                        {"Name": "StopCount", "Unit": "Count"},
-                        {"Name": "DurationMs", "Unit": "Milliseconds"}
-                    ]
-                }
-            ]
-        },
-        "Decision": metrics_data.get("decision", "UNKNOWN"),
-        "PolicyDecision": metrics_data.get("policy_decision", "UNKNOWN"),
-        "StopCount": metrics_data.get("stop_count", 0),
-        "DurationMs": trace.get("duration_ms", 0),
-        "TraceId": trace.get("trace_id", ""),
-        "CorrelationId": trace.get("correlation_id", ""),
-        "UserId": trace.get("user_id", "anonymous"),
+def emit_metrics_log(trace: dict[str, Any], metrics_data: dict[str, Any]) -> None:
+    """한 줄짜리 구조화 로그를 표준 에러로 남긴다(결과를 내는 표준 출력과 섞지 않는다).
+
+    SAFE_TRADE_METRICS_LOG=0 이면 남기지 않는다. 외부 서비스로 전송하지 않는다.
+    """
+    if os.getenv("SAFE_TRADE_METRICS_LOG", "1") == "0":
+        return
+    record = {
+        "type": "safe_trade_metrics",
+        "timestamp_ms": int(time.time() * 1000),
+        "decision": metrics_data.get("decision", "UNKNOWN"),
+        "policy_decision": metrics_data.get("policy_decision", "UNKNOWN"),
+        "stop_count": metrics_data.get("stop_count", 0),
+        "duration_ms": trace.get("duration_ms", 0),
+        "trace_id": trace.get("trace_id", ""),
+        "correlation_id": trace.get("correlation_id", ""),
     }
-    print(json.dumps(emf, ensure_ascii=False))
-
-
-def emit_async_decision_event(decision_log: dict[str, Any]) -> None:
-    """Mock asynchronous event emission to EventBridge."""
-    try:
-        import boto3  # type: ignore[import-not-found]
-        client = boto3.client("events")
-        client.put_events(
-            Entries=[
-                {
-                    "Source": "com.kakaopay.safetrade",
-                    "DetailType": "DecisionMade",
-                    "Detail": json.dumps(decision_log, ensure_ascii=False),
-                    "EventBusName": "default",
-                }
-            ]
-        )
-    except Exception as exc:  # noqa: BLE001
-        # Log failure but DO NOT block the synchronous response to the user.
-        print(f"Failed to emit async event: {exc}")
+    print(json.dumps(record, ensure_ascii=False), file=sys.stderr)
