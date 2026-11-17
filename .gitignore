@@ -12,3 +12,5 @@ __pycache__/
 docs/reboot/archive/aws/backup-*/
 # market-hours-guard 스캔 결과
 mhg-output/
+# margin-rule-check 점검 결과
+mrc-output/

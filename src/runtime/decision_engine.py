@@ -5,7 +5,6 @@ from typing import Any
 
 from decision_log import stable_id
 from state_store import (
-    DuplicateStateRecordError,
     InMemoryStateStore,
     StateStore,
     now_seconds,

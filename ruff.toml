@@ -1,0 +1,12 @@
+# 프로젝트 공통 린트 규칙 (CI와 로컬이 같은 규칙을 쓰도록 명시한다)
+target-version = "py311"
+line-length = 120
+
+[lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[lint.per-file-ignores]
+# 테스트·실행 진입점은 sys.path를 먼저 설정한 뒤 import한다(스킬·런타임 모듈을 직접 불러오기 위해).
+"tests/**" = ["E402"]
+"src/runtime/runtime_handler.py" = ["E402"]
+"src/skills/*/scripts/*.py" = ["E402"]
