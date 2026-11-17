@@ -1,0 +1,59 @@
+{
+  "recorded_at_utc": "2026-11-17T21:27:53.742500+00:00",
+  "plugin_version": "0.6.0",
+  "python_version": "3.12.1",
+  "source_commit": "6b9e7521b3460f9feabaaaa2df28105046195467",
+  "modified_tracked_source_files": [],
+  "capture_kind": "cli_transcripts_not_gui_screenshots",
+  "comparison": "existing before and fixed synthetic fixtures, not a recorded live edit",
+  "redaction": "workspace and user-profile path prefixes only; AI conversation logs unchanged",
+  "formatting": "line endings normalized and trailing whitespace removed",
+  "steps": [
+    {
+      "id": "mhg-before-scan",
+      "exit_code": 1,
+      "expectation_met": true
+    },
+    {
+      "id": "mhg-before-generate",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "id": "mhg-before-tests",
+      "exit_code": 1,
+      "expectation_met": true
+    },
+    {
+      "id": "mhg-after-scan",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "id": "mhg-after-generate",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "id": "mhg-after-tests",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "id": "mrc-lint",
+      "exit_code": 1,
+      "expectation_met": true
+    },
+    {
+      "id": "margin-guard",
+      "exit_code": 1,
+      "expectation_met": true
+    },
+    {
+      "id": "usd-rule",
+      "exit_code": 0,
+      "expectation_met": true
+    }
+  ],
+  "all_expectations_met": true
+}

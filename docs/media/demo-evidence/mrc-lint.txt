@@ -1,0 +1,16 @@
+command: python <repo>\src\skills\margin-rule-check\scripts\margin_rule_check.py lint --repo <repo>\src\skills\margin-rule-check\examples\support-docs --out <demo-temp>\mrc
+cwd: <repo>
+exit_code: 1
+expected_exit_code: 1
+expectation_met: True
+
+STDOUT
+[mrc] support-docs: 고칠 것 5 · 확인 필요 0 · 일치 9
+  MISCONCEPTION app/margin_notice.yaml:8  120%  120%면 반대매매를 피할 수 있다는 안내는 틀립니다. 140% 미만이면 이미 담보부족이고, 120%는 긴급 반대매매 기준입니다.
+  MISCONCEPTION counseling_script.md:6  120%  120%면 반대매매를 피할 수 있다는 안내는 틀립니다. 140% 미만이면 이미 담보부족이고, 120%는 긴급 반대매매 기준입니다.
+  MISMATCH      app/margin_notice.yaml:3  130%  담보유지비율은 140%인데 130%로 적혀 있습니다.
+  MISMATCH      app/margin_notice.yaml:6  3  규칙상 liquidation_after_business_days는 2영업일인데 3로 설정돼 있습니다.
+  MISMATCH      counseling_script.md:7  D+3  규칙상 이 문장의 일정은 D+2인데 D+3로 적혀 있습니다.
+[mrc] 보고서: <demo-temp>\mrc\report.md
+
+STDERR

@@ -1,0 +1,151 @@
+command: python -m pytest -q --tb=short -p no:cacheprovider tests
+cwd: <demo-temp>\before
+exit_code: 1
+expected_exit_code: 1
+expectation_met: True
+
+STDOUT
+.....FF..FF..FFFF..FF..FF.......F.........F.F.F.F.                       [100%]
+================================== FAILURES ===================================
+___________ test_market_hours_boundary[krx_session@20261118-160000] ___________
+tests\test_market_hours_generated.py:28: in test_market_hours_boundary
+    assert actual == case["expect"], (
+E   AssertionError: KRX 세션 판정: 16:00~20:00 시작 정각 → 16:00~20:00 구간 | 시각 2026-11-18T16:00:00+09:00 (2026-11-18 16:00:00 KST) | 기대 'AFTER', 실제 'CLOSED'
+E   assert 'CLOSED' == 'AFTER'
+E
+E     - AFTER
+E     + CLOSED
+___________ test_market_hours_boundary[krx_session@20261118-195959] ___________
+tests\test_market_hours_generated.py:28: in test_market_hours_boundary
+    assert actual == case["expect"], (
+E   AssertionError: KRX 세션 판정: 16:00~20:00 종료 1초 전 → 16:00~20:00 구간 | 시각 2026-11-18T19:59:59+09:00 (2026-11-18 19:59:59 KST) | 기대 'AFTER', 실제 'CLOSED'
+E   assert 'CLOSED' == 'AFTER'
+E
+E     - AFTER
+E     + CLOSED
+___________ test_market_hours_boundary[krx_session@20261119-090000] ___________
+tests\test_market_hours_generated.py:28: in test_market_hours_boundary
+    assert actual == case["expect"], (
+E   AssertionError: [2027학년도 수능일] KRX 세션 판정: 09:00~15:30 (평소 경계) 시작 정각 → 구간 밖 | 시각 2026-11-19T09:00:00+09:00 (2026-11-19 09:00:00 KST) | 기대 'CLOSED', 실제 'REGULAR'
+E   assert 'REGULAR' == 'CLOSED'
+E
+E     - CLOSED
+E     + REGULAR
+___________ test_market_hours_boundary[krx_session@20261119-095959] ___________
+tests\test_market_hours_generated.py:28: in test_market_hours_boundary
+    assert actual == case["expect"], (
+E   AssertionError: [2027학년도 수능일] KRX 세션 판정: 10:00~16:30 시작 1초 전 → 구간 밖 | 시각 2026-11-19T09:59:59+09:00 (2026-11-19 09:59:59 KST) | 기대 'CLOSED', 실제 'REGULAR'
+E   assert 'REGULAR' == 'CLOSED'
+E
+E     - CLOSED
+E     + REGULAR
+___________ test_market_hours_boundary[krx_session@20261119-153000] ___________
+tests\test_market_hours_generated.py:28: in test_market_hours_boundary
+    assert actual == case["expect"], (
+E   AssertionError: [2027학년도 수능일] KRX 세션 판정: 09:00~15:30 (평소 경계) 종료 정각 → 10:00~16:30 구간 | 시각 2026-11-19T15:30:00+09:00 (2026-11-19 15:30:00 KST) | 기대 'REGULAR', 실제 'CLOSED'
+E   assert 'CLOSED' == 'REGULAR'
+E
+E     - REGULAR
+E     + CLOSED
+___________ test_market_hours_boundary[krx_session@20261119-155959] ___________
+tests\test_market_hours_generated.py:28: in test_market_hours_boundary
+    assert actual == case["expect"], (
+E   AssertionError: [2027학년도 수능일] KRX 세션 판정: 16:00~20:00 (평소 경계) 시작 1초 전 → 10:00~16:30 구간 | 시각 2026-11-19T15:59:59+09:00 (2026-11-19 15:59:59 KST) | 기대 'REGULAR', 실제 'CLOSED'
+E   assert 'CLOSED' == 'REGULAR'
+E
+E     - REGULAR
+E     + CLOSED
+___________ test_market_hours_boundary[krx_session@20261119-160000] ___________
+tests\test_market_hours_generated.py:28: in test_market_hours_boundary
+    assert actual == case["expect"], (
+E   AssertionError: [2027학년도 수능일] KRX 세션 판정: 16:00~20:00 (평소 경계) 시작 정각 → 10:00~16:30 구간 | 시각 2026-11-19T16:00:00+09:00 (2026-11-19 16:00:00 KST) | 기대 'REGULAR', 실제 'CLOSED'
+E   assert 'CLOSED' == 'REGULAR'
+E
+E     - REGULAR
+E     + CLOSED
+___________ test_market_hours_boundary[krx_session@20261119-162959] ___________
+tests\test_market_hours_generated.py:28: in test_market_hours_boundary
+    assert actual == case["expect"], (
+E   AssertionError: [2027학년도 수능일] KRX 세션 판정: 10:00~16:30 종료 1초 전 → 10:00~16:30 구간 | 시각 2026-11-19T16:29:59+09:00 (2026-11-19 16:29:59 KST) | 기대 'REGULAR', 실제 'CLOSED'
+E   assert 'CLOSED' == 'REGULAR'
+E
+E     - REGULAR
+E     + CLOSED
+___________ test_market_hours_boundary[krx_session@20261119-170000] ___________
+tests\test_market_hours_generated.py:28: in test_market_hours_boundary
+    assert actual == case["expect"], (
+E   AssertionError: [2027학년도 수능일] KRX 세션 판정: 17:00~20:00 시작 정각 → 17:00~20:00 구간 | 시각 2026-11-19T17:00:00+09:00 (2026-11-19 17:00:00 KST) | 기대 'AFTER', 실제 'CLOSED'
+E   assert 'CLOSED' == 'AFTER'
+E
+E     - AFTER
+E     + CLOSED
+___________ test_market_hours_boundary[krx_session@20261119-195959] ___________
+tests\test_market_hours_generated.py:28: in test_market_hours_boundary
+    assert actual == case["expect"], (
+E   AssertionError: [2027학년도 수능일] KRX 세션 판정: 17:00~20:00 종료 1초 전 → 17:00~20:00 구간 | 시각 2026-11-19T19:59:59+09:00 (2026-11-19 19:59:59 KST) | 기대 'AFTER', 실제 'CLOSED'
+E   assert 'CLOSED' == 'AFTER'
+E
+E     - AFTER
+E     + CLOSED
+___________ test_market_hours_boundary[krx_session@20261231-090000] ___________
+tests\test_market_hours_generated.py:28: in test_market_hours_boundary
+    assert actual == case["expect"], (
+E   AssertionError: [휴장일 연말휴장일] KRX 세션 판정: 09:00~15:30 (평소 경계) 시작 정각 → 구간 밖 | 시각 2026-12-31T09:00:00+09:00 (2026-12-31 09:00:00 KST) | 기대 'CLOSED', 실제 'REGULAR'
+E   assert 'REGULAR' == 'CLOSED'
+E
+E     - CLOSED
+E     + REGULAR
+___________ test_market_hours_boundary[krx_session@20261231-152959] ___________
+tests\test_market_hours_generated.py:28: in test_market_hours_boundary
+    assert actual == case["expect"], (
+E   AssertionError: [휴장일 연말휴장일] KRX 세션 판정: 09:00~15:30 (평소 경계) 종료 1초 전 → 구간 밖 | 시각 2026-12-31T15:29:59+09:00 (2026-12-31 15:29:59 KST) | 기대 'CLOSED', 실제 'REGULAR'
+E   assert 'REGULAR' == 'CLOSED'
+E
+E     - CLOSED
+E     + REGULAR
+___________ test_market_hours_boundary[sor_enabled@20261118-195959] ___________
+tests\test_market_hours_generated.py:28: in test_market_hours_boundary
+    assert actual == case["expect"], (
+E   AssertionError: SOR 라우팅 적용 여부: 09:00~20:00 종료 1초 전 → 09:00~20:00 구간 | 시각 2026-11-18T19:59:59+09:00 (2026-11-18 19:59:59 KST) | 기대 True, 실제 False
+E   assert False == True
+_________ test_market_hours_boundary[us_regular_open@20261102-232959] _________
+tests\test_market_hours_generated.py:28: in test_market_hours_boundary
+    assert actual == case["expect"], (
+E   AssertionError: 미국 정규장 개장 여부: 09:30~16:00 시작 1초 전 → 구간 밖 | 시각 2026-11-02T23:29:59+09:00 (2026-11-02 09:29:59 EST) | 기대 False, 실제 True
+E   assert True == False
+_________ test_market_hours_boundary[us_regular_open@20261103-055959] _________
+tests\test_market_hours_generated.py:28: in test_market_hours_boundary
+    assert actual == case["expect"], (
+E   AssertionError: 미국 정규장 개장 여부: 09:30~16:00 종료 1초 전 → 09:30~16:00 구간 | 시각 2026-11-03T05:59:59+09:00 (2026-11-02 15:59:59 EST) | 기대 True, 실제 False
+E   assert False == True
+_________ test_market_hours_boundary[us_regular_open@20261118-232959] _________
+tests\test_market_hours_generated.py:28: in test_market_hours_boundary
+    assert actual == case["expect"], (
+E   AssertionError: 미국 정규장 개장 여부: 09:30~16:00 시작 1초 전 → 구간 밖 | 시각 2026-11-18T23:29:59+09:00 (2026-11-18 09:29:59 EST) | 기대 False, 실제 True
+E   assert True == False
+_________ test_market_hours_boundary[us_regular_open@20261119-055959] _________
+tests\test_market_hours_generated.py:28: in test_market_hours_boundary
+    assert actual == case["expect"], (
+E   AssertionError: 미국 정규장 개장 여부: 09:30~16:00 종료 1초 전 → 09:30~16:00 구간 | 시각 2026-11-19T05:59:59+09:00 (2026-11-18 15:59:59 EST) | 기대 True, 실제 False
+E   assert False == True
+=========================== short test summary info ===========================
+FAILED tests/test_market_hours_generated.py::test_market_hours_boundary[krx_session@20261118-160000]
+FAILED tests/test_market_hours_generated.py::test_market_hours_boundary[krx_session@20261118-195959]
+FAILED tests/test_market_hours_generated.py::test_market_hours_boundary[krx_session@20261119-090000]
+FAILED tests/test_market_hours_generated.py::test_market_hours_boundary[krx_session@20261119-095959]
+FAILED tests/test_market_hours_generated.py::test_market_hours_boundary[krx_session@20261119-153000]
+FAILED tests/test_market_hours_generated.py::test_market_hours_boundary[krx_session@20261119-155959]
+FAILED tests/test_market_hours_generated.py::test_market_hours_boundary[krx_session@20261119-160000]
+FAILED tests/test_market_hours_generated.py::test_market_hours_boundary[krx_session@20261119-162959]
+FAILED tests/test_market_hours_generated.py::test_market_hours_boundary[krx_session@20261119-170000]
+FAILED tests/test_market_hours_generated.py::test_market_hours_boundary[krx_session@20261119-195959]
+FAILED tests/test_market_hours_generated.py::test_market_hours_boundary[krx_session@20261231-090000]
+FAILED tests/test_market_hours_generated.py::test_market_hours_boundary[krx_session@20261231-152959]
+FAILED tests/test_market_hours_generated.py::test_market_hours_boundary[sor_enabled@20261118-195959]
+FAILED tests/test_market_hours_generated.py::test_market_hours_boundary[us_regular_open@20261102-232959]
+FAILED tests/test_market_hours_generated.py::test_market_hours_boundary[us_regular_open@20261103-055959]
+FAILED tests/test_market_hours_generated.py::test_market_hours_boundary[us_regular_open@20261118-232959]
+FAILED tests/test_market_hours_generated.py::test_market_hours_boundary[us_regular_open@20261119-055959]
+17 failed, 33 passed in 0.15s
+
+STDERR

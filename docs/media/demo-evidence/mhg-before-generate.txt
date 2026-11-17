@@ -1,0 +1,13 @@
+command: python <repo>\src\skills\market-hours-guard\scripts\mhg.py gen-tests --calendar <repo>\src\skills\market-hours-guard\assets\calendar.demo.toml --out <demo-temp>\before\tests
+cwd: <repo>
+exit_code: 0
+expected_exit_code: 0
+expectation_met: True
+
+STDOUT
+[mhg] 경계 테스트 50건 생성 (pytest, probe: krx_session, sor_enabled, us_regular_open)
+  - <demo-temp>\before\tests\test_market_hours_generated.py
+  - <demo-temp>\before\tests\market_hours_cases.json
+  - <demo-temp>\before\tests\mhg_adapter.py (기존 파일 유지)
+
+STDERR

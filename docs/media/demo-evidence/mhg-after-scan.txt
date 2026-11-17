@@ -1,0 +1,11 @@
+command: python <repo>\src\skills\market-hours-guard\scripts\mhg.py scan --repo <demo-temp>\after --calendar <repo>\src\skills\market-hours-guard\assets\calendar.demo.toml --out <demo-temp>\scan-after
+cwd: <repo>
+exit_code: 0
+expected_exit_code: 0
+expectation_met: True
+
+STDOUT
+[mhg] after: 파일 9개, 거래시간 표현 16개 → MATCH 16
+[mhg] 보고서: <demo-temp>\scan-after\report.md
+
+STDERR
