@@ -2,39 +2,60 @@
 
 ## 한 문장 정의
 
-Safe Trade Rule Builder는 초보 투자자의 자연어 매수·매도 의도를 바로 주문으로 실행하지 않고, 데이터 신뢰도·감정 통제·정책 검증·백테스트·수동 확인 절차를 거친 서버리스 매매 룰 후보로 바꾸는 Codex 플러그인입니다.
+카카오페이증권의 공개·검증 가능한 문제를 해결하는 Codex 플러그인입니다. **사내 개발자·QA용 스킬**(거래시간 변경 점검기)과 **일반 투자자용 스킬**(신용거래 반대매매 가드 + 안전 매매 룰)로 구성됩니다.
+
+## 대상별 구성
+
+| 대상 | 스킬 | 문제 (공개 근거) | 결과물 |
+| --- | --- | --- | --- |
+| 사내 개발자·QA (주력) | `market-hours-guard` | MTS 장애 42건으로 대형 12개사 중 공동 1위, 4년 연속 증가한 유일한 회사(금감원 자료). 거래시간 확대가 진행 중이며, 애프터마켓 개장 첫날 SOR 시간 변경 과정에서 대형사 장애 | 코드·설정의 거래시간 값을 승인된 기준표와 대조하고, Codex가 수정한 뒤 경계 시각 테스트로 확인 |
+| 일반 투자자 (부가) | `safe-trade-rule-builder` | 신용공여 1년 새 168.5% 증가, 상반기 민원 829% 증가, 담보비율 오안내(120%로 안내, 실제 140%) 보도, 2026-11-06 한시 유예 공지 | 반대매매 기한·필요 금액·유예 판정을 출처와 함께 계산. 신용 매수 전 위험 확인. 자연어 매매 요청을 수동 확인 룰로 변환 |
+
+Codex 플러그인이므로 주력 사용자는 Codex로 저장소 작업을 하는 개발자입니다. 같은 플러그인은 ChatGPT에서도 설치되므로 투자자용 스킬도 일반 사용자가 접근할 수 있습니다.
 
 ## 문제 적합성
 
-- 카카오페이증권 본선 문제의 핵심은 “정답 종목 추천”보다 “사용자가 납득하고 안심할 수 있는 의사결정 과정”입니다.
-- 이 플러그인은 매수·매도 판단을 대신하지 않고, 사용자의 말을 구조화한 뒤 왜 멈추는지, 왜 기다리는지, 왜 수동 확인이 필요한지 설명합니다.
+- 사내용: 거래시간 제도는 계속 바뀝니다(애프터마켓 개장, 프리마켓 예정, 미국 서머타임). 증권사들은 그 전산 반영을 부담이라고 공개적으로 밝혔고, 변경이 처음 적용된 날 실제 장애가 났습니다. 이 스킬은 그 변경 작업에서 "어디를 바꿔야 하는지 찾고, 같은 기준으로 바꿨는지 확인하는" 부분을 맡습니다. 장애 원인 전체나 용량 문제를 해결한다고 주장하지 않습니다.
+- 투자자용: 신용거래가 빠르게 늘었고, 반대매매 기준은 상담 과정에서도 틀린 안내가 나올 만큼 복잡합니다. 이 스킬은 회사 공식 기준만으로 계산하고 출처를 붙입니다.
+- 카카오페이증권 본선 문제의 핵심은 "정답 종목 추천"보다 "사용자가 납득하고 안심할 수 있는 의사결정 과정"입니다. 투자자용 스킬은 매수·매도 판단을 대신하지 않고, 왜 멈추는지, 왜 기다리는지, 왜 수동 확인이 필요한지 설명합니다.
 - 공개 카카오페이 API에는 증권 주문 API가 확인되지 않아, 실주문 대신 provider interface와 yfinance 시장 데이터로 교체 가능한 구조를 만들었습니다.
 
 ## 데모 흐름
 
-1. 사용자가 “카카오가 전일 종가보다 3% 떨어지면 10만원만 매수 후보로 알려줘”라고 입력합니다.
-2. GPT API 기반 LLM parser가 구조화 룰을 만들고, 실패하면 deterministic parser가 fallback합니다.
-3. Pydantic schema가 trigger/action/execution mode를 검증합니다.
-4. policy engine이 감정 표현, 투자 권유 요청, 주문 모호성을 검사합니다.
-5. market data provider가 시세와 과거 데이터를 가져오고, backtest가 조건 발동 양상을 검토합니다.
-6. Lambda runtime이 broker health, quote freshness, account limit, trigger match를 평가합니다.
-7. DecisionEngine이 DynamoDB idempotency/cooldown을 확인하고 최종 decision을 반환합니다.
-8. 사용자는 한국어 설명과 확인 체크리스트를 보고 MTS에서 직접 판단합니다.
+### 사내 개발자: "SOR 적용 시간이 20:00까지 늘어난 변경이 반영됐는지 점검해줘"
+
+1. Codex가 `mhg.py scan`으로 합성 저장소를 검사합니다. 결과는 STALE 1(라우터의 SOR 종료 15:30), DST_RISK 2(미국 장 한국시간 고정값), AMBIGUOUS 1, UNMAPPED 1(정산 배치)입니다.
+2. 같은 15:30이라도 알림 코드의 "정규장 마감"은 정상(MATCH)으로 구분합니다.
+3. Codex가 각 지점을 열어 고치고 `mhg:` 주석으로 의미를 고정합니다.
+4. `gen-tests`로 경계 테스트 28건을 생성합니다. 수정 전 7건이 실패하고 수정 후 28건이 모두 통과합니다. 미국 장 판정은 11월 1일 서머타임 해제 이후 케이스에서만 실패합니다.
+
+### 투자자: "담보비율 120%만 맞추면 반대매매 안 되지?"
+
+1. 오해부터 바로잡습니다. 120%는 긴급 기준이고, 140% 미만이면 이미 담보부족입니다.
+2. 가상 계좌에서 7,600만 원을 입금해 127.2%가 되어도, 그날 120% 미만이었다면 당일 140% 회복 의무가 남아 다음 날 반대매매 대상입니다. 추가로 6,400만 원 입금 또는 4,571만 원 상환이 필요합니다.
+3. 신용 매수 요청에는 시작 담보비율과 반대매매 구간까지의 하락률을 보여주고 `REQUIRE_CLARIFICATION`으로 멈춥니다.
+4. "장 마감 30분 전에만"처럼 시간 조건이 있는 룰은 종목 시장의 현지 시각으로 판정합니다. 오전 10시라면 가격 조건이 맞아도 `WAIT`입니다.
 
 ## 심사 포인트
 
-- 실제 Codex plugin 구조: `src/.codex-plugin/plugin.json`, `skills/.../SKILL.md`, runtime, infra, docs 포함
-- 실제 서버리스 산출물: AWS SAM `template.yaml`, Lambda handler, DynamoDB state/log table
-- 실제 통합 검증: 배포된 Lambda에서 DynamoDB backend로 중복 실행 차단과 STOP 경로 검증
+- 실제 Codex plugin 구조: `src/.codex-plugin/plugin.json` 하나에 스킬 2개, 각 `SKILL.md`·스크립트·규칙 파일·예제 포함
+- 근거 추적: 모든 기준값(거래시간, 140%/120%, 한시 유예)에 출처 ID가 있고, 출처 없는 규칙은 로드 단계에서 거부
+- 결정적 판정: 숫자 계산과 판정은 스크립트가 맡아 같은 입력이면 같은 결과. Codex는 문맥 판단·설명·수정을 맡음
+- 테스트: 188개(PYTHONPATH 유무 모두 통과). 점검기로 투자자용 스킬을 검사해 두 스킬의 거래시간 기준이 같은지도 테스트로 지킴
+- 완전 로컬 실행: 클라우드 계정·외부 저장소 없이 동작. 중복 실행 차단·쿨다운·감사 로그는 메모리(기본) 또는 로컬 파일 저장소. 플러그인 소스에 클라우드 SDK가 없음을 테스트로 확인
 - 실제 GPT API 검증: Responses API Structured Output 경로에서 `structured_output_used=true` 확인
 - 안전 설계: 실주문 없음, 수동 확인만 반환, 감정 플래그 시 clarification으로 downgrade
 - 입력 보안: prompt injection과 자동 주문 유도 표현은 runtime precheck에서 `STOP` 처리
-- 운영 확장성: policy, risk limit, prompt-security rule은 local fallback을 유지하면서 SSM/AppConfig provider 경계로 핫로딩 가능
-- 유지보수성: parser, validator, policy, evaluation, state store, decision log, provider, UX를 분리
+- 운영 확장성: policy, risk limit, prompt-security rule을 로컬 JSON으로 분리하고, 파일을 바꾸면 재시작 없이 다시 읽음
 - 감사 가능성: immutable decision log와 trace id, 한국어 user_action, error taxonomy 제공
+
+근거와 한계: [MARKET_HOURS_GUARD.md](MARKET_HOURS_GUARD.md), [MARKET_HOURS_EVIDENCE.md](MARKET_HOURS_EVIDENCE.md), [MARGIN_GUARD.md](MARGIN_GUARD.md)
 
 ## 현재 한계와 대책
 
+- 사내용 스킬은 합성 저장소로 검증했습니다. 실제 회사 저장소에서의 효과(누락 감소, 작업 시간)는 측정하지 않았습니다.
+- 투자자용 담보비율 계산식은 공식 안내에 없어 업계 일반식을 쓰며, 출력에 "앱 표시값 우선"을 항상 표시합니다.
+- 시간 조건 판정은 스킬 경로에 적용했습니다. 로컬 런타임(`runtime_handler`) 경로에는 아직 적용하지 않았습니다.
 - 카카오페이증권 공개 주문 API가 없어 yfinance와 event provider를 사용합니다. 추후 공식 API가 열리면 provider만 교체합니다.
 - LLM parser는 운영 환경에서 비용, 지연, JSON 오류가 발생할 수 있습니다. schema validation과 deterministic fallback으로 방어합니다.
 - 백테스트는 수익 예측이 아니라 조건 발동 빈도와 위험 신호 확인용입니다.

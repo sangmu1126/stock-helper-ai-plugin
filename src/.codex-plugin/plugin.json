@@ -1,16 +1,16 @@
 {
   "name": "safe-trade-rule-builder",
-  "version": "0.1.0",
-  "description": "Generate safer serverless trading-rule drafts from beginner investors' natural-language trade intent.",
+  "version": "0.3.0",
+  "description": "Safe-trading plugin for KakaoPay Securities with two audiences. For in-house developers and QA (market-hours-guard): check that trading-hours changes (KRX after-market/pre-market, NXT sessions, SOR window, US DST) are applied consistently across code and config, and generate boundary-time tests. For investors (safe-trade-rule-builder): compute forced-liquidation (반대매매) deadlines and required deposits for credit trading, and turn natural-language trade requests into safe, manually confirmed rule drafts.",
   "author": {
     "name": "AX Hackathon Team"
   },
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
   "interface": {
-    "displayName": "Safe Trade Rule Builder",
-    "shortDescription": "Turn emotional trade intent into safer rule drafts.",
-    "longDescription": "Safe Trade Rule Builder helps beginner investors convert natural-language buy or sell intent into explainable, mechanical, serverless trading-rule drafts with pre-execution health checks, risk guardrails, and manual confirmation boundaries.",
+    "displayName": "KakaoPay Securities Safe Trade",
+    "shortDescription": "개발자에게는 거래시간 변경 점검, 투자자에게는 반대매매·안전 매매 점검.",
+    "longDescription": "Two skills in one plugin. market-hours-guard (in-house developers and QA): compares time values scattered across brokerage code and config with an approved session calendar, flags stale, DST-unsafe, or ambiguous values, lets Codex fix them with traceable annotations, and generates boundary-time tests. safe-trade-rule-builder (investors): checks credit-trading collateral ratios against KakaoPay Securities' published rules (140% maintenance, 120% emergency, D+1/D+2, temporary grace) with sources, and converts natural-language buy or sell requests into explainable rule drafts with time-window checks, policy guardrails, and manual confirmation. No live orders.",
     "developerName": "AX Hackathon Team",
     "category": "Productivity",
     "capabilities": [
@@ -18,9 +18,10 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Convert this trade idea into a safe serverless rule draft.",
-      "Explain whether this buy or sell rule is emotionally risky.",
-      "Generate a Lambda-style guardrail for this trading rule."
+      "SOR 적용 시간이 20:00까지 늘어난 변경이 이 저장소에 빠짐없이 반영됐는지 점검하고 경계 테스트까지 만들어줘.",
+      "미국 서머타임 해제 후 한국시간 고정값이 남아 있는지 찾아서 고쳐줘.",
+      "담보비율 120%만 맞추면 반대매매 안 되지?",
+      "삼성전자가 3% 떨어지면 신용으로 100만원어치 매수 후보로 알려줘."
     ]
   }
 }
