@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ "main", "master" ]
 
+permissions:
+  contents: read
+  security-events: write   # 거래시간 점검 결과(SARIF)를 code scanning에 올리기 위해
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -46,3 +50,19 @@ jobs:
         REQUIRE_JUNIT: "1"
       run: |
         pytest -v
+
+    # 이 플러그인 자신의 거래시간 값(런타임 세션 설정 market_sessions.json 등)을 기준표와 대조한다.
+    # 실패 조건이 있으면 종료 코드 1로 빌드를 막고, 결과는 PR 화면에 표시되도록 SARIF로 올린다.
+    - name: Market hours guard (runtime session settings)
+      if: always()
+      run: |
+        python src/skills/market-hours-guard/scripts/mhg.py scan --repo src/runtime \
+          --calendar src/skills/market-hours-guard/assets/calendar.demo.toml \
+          --out mhg-output/runtime --sarif mhg-output/runtime.sarif
+
+    - name: Upload market hours findings to code scanning
+      if: always() && hashFiles('mhg-output/runtime.sarif') != '' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: mhg-output/runtime.sarif
+        category: market-hours-guard

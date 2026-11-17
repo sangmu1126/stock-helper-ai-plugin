@@ -202,3 +202,38 @@ def test_unreadable_docx_is_flagged_for_review(tmp_path):
     assert [(f.status, f.path, f.kind) for f in findings] == [("REVIEW", "broken.docx", "docx")]
     with pytest.raises(DocxError):
         read_docx_text(tmp_path / "broken.docx")
+
+
+# ── SARIF (GitHub code scanning) ─────────────────────────────
+
+from mrc_sarif import to_sarif  # noqa: E402
+
+
+def test_sarif_for_support_docs():
+    repo = SKILL / "examples" / "support-docs"
+    doc = to_sarif(lint_repo(repo, RULES), repo, RULES["version"], base=ROOT)
+    assert doc["version"] == "2.1.0"
+    run = doc["runs"][0]
+    assert run["tool"]["driver"]["name"] == "margin-rule-check"
+    assert sorted((r["ruleId"], r["level"]) for r in run["results"]) == [
+        ("MISCONCEPTION", "error"), ("MISCONCEPTION", "error"),
+        ("MISMATCH", "error"), ("MISMATCH", "error"), ("MISMATCH", "error")]
+    location = run["results"][0]["locations"][0]["physicalLocation"]
+    assert location["artifactLocation"]["uri"].startswith("src/skills/margin-rule-check/examples/support-docs/")
+    assert location["region"]["startLine"] >= 1
+
+
+def test_sarif_docx_uses_paragraph_in_message_not_region(tmp_path):
+    _docx(tmp_path / "script.docx", _p("안내") + _p("담보비율이 ", "120", "% 이상이면 반대매매는 되지 않습니다."))
+    result = to_sarif(lint_repo(tmp_path, RULES), tmp_path, RULES["version"], base=tmp_path)["runs"][0]["results"][0]
+    assert "region" not in result["locations"][0]["physicalLocation"]
+    assert result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] == "script.docx"
+    assert "(문단 2)" in result["message"]["text"]
+
+
+def test_cli_lint_writes_sarif(tmp_path):
+    sarif = tmp_path / "mrc.sarif"
+    proc = _run(SCRIPT, "lint", "--repo", SKILL / "examples" / "support-docs-fixed", "--out", tmp_path / "out",
+                "--sarif", sarif)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert json.loads(sarif.read_text(encoding="utf-8"))["runs"][0]["results"] == []

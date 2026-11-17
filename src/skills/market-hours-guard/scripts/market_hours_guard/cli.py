@@ -12,6 +12,7 @@ from .calendar_model import CalendarError, load_calendar
 from .classify import STATUS_ORDER
 from .junit import write_junit_tests
 from .report import render_markdown
+from .sarif import to_sarif
 from .scan import scan_repo
 from .testgen import write_tests
 
@@ -57,6 +58,11 @@ def _cmd_scan(args) -> int:
     (out / "findings.json").write_text(
         json.dumps(result.to_json(), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (out / "report.md").write_text(render_markdown(result), encoding="utf-8")
+    if args.sarif:
+        sarif = Path(args.sarif)
+        sarif.parent.mkdir(parents=True, exist_ok=True)
+        sarif.write_text(json.dumps(to_sarif(result, args.fail_on, Path(args.sarif_base)), ensure_ascii=False,
+                                    indent=2) + "\n", encoding="utf-8")
 
     counts = result.counts()
     summary = " · ".join(f"{s} {counts[s]}" for s in STATUS_ORDER if counts[s])
@@ -108,6 +114,8 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--fail-on", type=_statuses, default=_statuses("MISMATCH,STALE,DST_RISK"),
                       help="종료 코드 1로 실패시킬 상태 (기본: MISMATCH,STALE,DST_RISK)")
     scan.add_argument("--verbose", action="store_true", help="MATCH 항목도 출력")
+    scan.add_argument("--sarif", help="SARIF 2.1.0 파일로도 저장 (GitHub code scanning 업로드용)")
+    scan.add_argument("--sarif-base", default=".", help="SARIF 파일 경로의 기준 폴더 (기본: 현재 폴더 = 저장소 루트)")
     scan.set_defaults(func=_cmd_scan)
 
     gen = sub.add_parser("gen-tests", help="기준표 probe에서 경계 시각 테스트 생성")
@@ -117,6 +125,7 @@ def build_parser() -> argparse.ArgumentParser:
                      help="pytest(기본) 또는 junit(Java·Kotlin 저장소, JUnit 5)")
     gen.add_argument("--java-package", help="junit: 생성할 클래스의 패키지 (예: com.example.trading)")
     gen.set_defaults(func=_cmd_gen)
+
     return parser
 
 

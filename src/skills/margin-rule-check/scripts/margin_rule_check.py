@@ -26,6 +26,7 @@ sys.path.insert(0, str(_SKILLS_DIR / "safe-trade-rule-builder" / "scripts"))
 from docx_text import DocxError, read_docx_text
 from margin_guard import add_business_days, classify_ratio, evaluate_grace, exchange_holidays, load_margin_rules
 from mrc_junit import write_junit_tests
+from mrc_sarif import to_sarif
 
 SUFFIXES = {".md", ".txt", ".html", ".json", ".yaml", ".yml", ".properties", ".toml", ".py", ".kt", ".java",
             ".ts", ".tsx", ".js", ".csv", ".docx"}
@@ -352,6 +353,8 @@ def main(argv: list[str] | None = None) -> int:
     lint = sub.add_parser("lint", help="안내 문구·상담 스크립트·설정의 담보비율·일정 점검")
     lint.add_argument("--repo", required=True)
     lint.add_argument("--out", default="mrc-output")
+    lint.add_argument("--sarif", help="SARIF 2.1.0 파일로도 저장 (GitHub code scanning 업로드용)")
+    lint.add_argument("--sarif-base", default=".", help="SARIF 파일 경로의 기준 폴더 (기본: 현재 폴더 = 저장소 루트)")
     gen = sub.add_parser("gen-tests", help="계산 로직용 경계 테스트 생성")
     gen.add_argument("--out", required=True)
     gen.add_argument("--format", choices=["pytest", "junit"], default="pytest",
@@ -380,6 +383,11 @@ def main(argv: list[str] | None = None) -> int:
                                                    "findings": [asdict(f) for f in findings]},
                                                   ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (out / "report.md").write_text(render_report(repo, findings, rules), encoding="utf-8")
+    if args.sarif:
+        sarif = Path(args.sarif)
+        sarif.parent.mkdir(parents=True, exist_ok=True)
+        sarif.write_text(json.dumps(to_sarif(findings, repo, rules["version"], Path(args.sarif_base)),
+                                    ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     bad = [f for f in findings if f.status in ("MISCONCEPTION", "MISMATCH")]
     review = [f for f in findings if f.status == "REVIEW"]
     print(f"[mrc] {repo.name}: 고칠 것 {len(bad)} · 확인 필요 {len(review)} · 일치 {len(findings) - len(bad) - len(review)}")
