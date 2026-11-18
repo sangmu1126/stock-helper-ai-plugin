@@ -337,6 +337,7 @@ def test_cli_save_register_list_pause_and_once(tmp_path):
     saved = json.loads(cli(*add))
     assert saved["monitoring_started"] is False
     assert (saved["already_registered"], saved["enabled"]) == (False, True)
+    assert saved["warnings"] == []
     assert json.loads(cli("status"))["monitoring_running"] is False
     assert len(json.loads(cli("list"))) == 1
     cli("pause", saved["registered_rule_id"])
@@ -352,6 +353,48 @@ def test_cli_save_register_list_pause_and_once(tmp_path):
     # Removing an unknown id is an error, not a silent "removed".
     missing = raw("remove", saved["registered_rule_id"])
     assert missing.returncode == 2 and "Unknown rule id" in missing.stderr
+
+
+@pytest.mark.parametrize(("symbol", "provider", "expected"), [
+    ("035720.KS", "yfinance", ["KRX_QUOTES_DELAYED"]),
+    ("247540.KQ", "yfinance", ["KRX_QUOTES_DELAYED"]),
+    ("035720.KS", "demo-fixture", []),
+    ("TSLA", "yfinance", []),
+])
+def test_registration_warns_only_where_quotes_are_known_to_be_delayed(symbol, provider, expected):
+    from alert_watch import registration_warnings
+    assert registration_warnings(symbol, provider) == expected
+
+
+def test_cli_warns_when_a_krx_alert_on_yahoo_quotes_will_not_fire(tmp_path):
+    rule = {"asset": {"symbol": "035720.KS", "name": "Kakao Corp"},
+            "trigger": {"type": "price_drop_percent", "reference": "previous_close", "percent": 3},
+            "action": "notify_only", "execution_mode": "notify_only", "time_window": {"market_session": "regular"},
+            "cooldown": {"min_minutes_between_triggers": 10}, "cancel_conditions": [{"type": "quote_stale"}],
+            "emotional_risk_flags": [], "ambiguities": []}
+    path = tmp_path / "kakao.json"
+    path.write_text(json.dumps(rule), encoding="utf-8")
+
+    def add(provider):
+        return subprocess.run(
+            [sys.executable, "-X", "utf8", str(SCRIPTS / "alert_watch.py"), "--db", str(tmp_path / "alerts.sqlite3"),
+             "add", "--draft", str(path), "--intent", "카카오가 3% 떨어지면 알려줘", "--provider", provider, "--confirm"],
+            capture_output=True, text=True, encoding="utf-8",
+        )
+
+    real = add("yfinance")
+    assert real.returncode == 0, real.stderr
+    saved = json.loads(real.stdout)
+    assert saved["warnings"] == ["KRX_QUOTES_DELAYED"]
+    assert "STALE_QUOTE" in real.stderr and f"remove {saved['registered_rule_id']}" in real.stderr
+    # Still registered: the warning explains, it does not silently drop the user's confirmed rule.
+    store = AlertStore(tmp_path / "alerts.sqlite3")
+    try:
+        assert [row["id"] for row in store.rules()] == [saved["registered_rule_id"]]
+    finally:
+        store.close()
+    demo = add("demo-fixture")
+    assert demo.returncode == 0 and json.loads(demo.stdout)["warnings"] == [] and "STALE_QUOTE" not in demo.stderr
 
 
 def test_run_repeats_until_interrupt_and_releases_lock(monkeypatch, tmp_path):

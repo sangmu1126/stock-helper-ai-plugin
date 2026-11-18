@@ -20,6 +20,7 @@ from zoneinfo import ZoneInfo
 from builder import build_rule, safe_lookback_days
 from evaluation import evaluate_trigger
 from market_data import MAX_CLOCK_SKEW_SECONDS, get_provider
+from models import MAX_QUOTE_AGE_SECONDS
 from schema import ParsedRule
 from session_window import allowed_market_states, evaluate_time_window, load_sessions, market_for_symbol
 
@@ -240,6 +241,18 @@ def evaluate(rule: dict[str, Any], quote: dict[str, Any], now: int) -> dict[str,
     return result
 
 
+# Yahoo serves KRX quotes about 20 minutes late and has no KRX after-market quotes (measured 2026-11-18), so
+# a KRX alert on yfinance stops at STALE_QUOTE on every check. US regular-session quotes measured 0-2 s old.
+DELAYED_QUOTE_MARKETS = {"yfinance": {"KRX"}}
+
+
+def registration_warnings(symbol: str, provider: str) -> list[str]:
+    """Known reasons a registered rule will most likely never notify; registration itself still succeeds."""
+    if market_for_symbol(symbol, load_sessions()) in DELAYED_QUOTE_MARKETS.get(provider, set()):
+        return ["KRX_QUOTES_DELAYED"]
+    return []
+
+
 def quote_time_text(symbol: str, timestamp: int) -> str:
     """Show the source quote time in the market's own time zone instead of raw epoch seconds."""
     sessions = load_sessions()
@@ -359,12 +372,20 @@ def main() -> int:
             rule_id = store.register(args.intent, json.loads(args.draft.read_text(encoding="utf-8-sig")), args.provider)
             existing = known.get(rule_id)
             enabled = existing is None or bool(existing["enabled"])
+            saved = next(row for row in store.rules() if row["id"] == rule_id)
+            warnings = registration_warnings(json.loads(saved["payload"])["asset"]["symbol"], args.provider)
             print(encode({"registered_rule_id": rule_id, "already_registered": existing is not None,
-                          "enabled": enabled, "monitoring_started": False, "db": str(store.path)}))
+                          "enabled": enabled, "monitoring_started": False, "warnings": warnings,
+                          "db": str(store.path)}))
             if not enabled:
                 # Registering again must not silently undo an explicit pause, nor hide that it is still paused.
                 print(f"This rule was already registered and is paused; it stays paused. Run: resume {rule_id}",
                       file=sys.stderr)
+            if "KRX_QUOTES_DELAYED" in warnings:
+                print("Warning: Yahoo Finance quotes for KRX stocks are about 20 minutes delayed and have no "
+                      f"after-market prices, while alerts need a quote at most {MAX_QUOTE_AGE_SECONDS} seconds old. "
+                      "This alert will most likely stop at STALE_QUOTE on every check and never notify. "
+                      f"It is registered; to remove it run: remove {rule_id}", file=sys.stderr)
         elif args.command == "list":
             print(encode(store.rules()))
         elif args.command == "events":
