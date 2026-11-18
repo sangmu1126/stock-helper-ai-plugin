@@ -12,23 +12,23 @@
 | 핵심 구조 | 판정은 결정적 코드가 맡고, 문장 이해·설명·코드 수정은 Codex가 맡음 |
 | 근거 | 금감원 전산장애 통계, 담보비율 오안내 보도, 회사 공식 안내·공지, 거래소 발표 ([근거 문서](src/docs/MARKET_HOURS_EVIDENCE.md), [신용 가드 근거](src/docs/MARGIN_GUARD.md)) |
 | 검증 | 자동 테스트와 ruff 린트를 GitHub Actions CI에서 실행(생성된 JUnit 테스트를 실제 JDK로 실행하는 것 포함). 합성 저장소·가상 자료로 수정 전후 재현, 공개 증권 저장소 5곳으로 오탐 평가 |
-| 외부 연결 | 없음. 실시간 시세(yfinance)만 선택 사항 |
+| 외부 연결 | 없음. 시세 조회(Yahoo Finance, yfinance)만 선택 사항 |
 
 ### 실행 기록과 외부 기여
 
 - **공개 PR:** 한국투자증권 공식 예제의 폐지된 시간외 단일가 안내 9곳을 수정하는 [PR #91](https://github.com/koreainvestment/open-trading-api/pull/91)을 제출했습니다. 설명 문구만 변경했으며 해당 TR의 현행 제공 시간은 확정하지 않았습니다. PR 제출은 반영·승인을 의미하지 않습니다.
-- **실제 CLI 기록:** [실행 요약](docs/media/demo-evidence/summary.json), [변경 전 경계 테스트](docs/media/demo-evidence/mhg-before-tests.txt), [수정 예제 경계 테스트](docs/media/demo-evidence/mhg-after-tests.txt), [상담 문구 점검](docs/media/demo-evidence/mrc-lint.txt), [반대매매 가드](docs/media/demo-evidence/margin-guard.txt), [달러 조건 룰](docs/media/demo-evidence/usd-rule.txt).
-- **가격 알림 실사용 흐름 (0.7.0):** 빈 작업 폴더에서 [초안](docs/media/alert-flow/01-draft.txt) → [조건 확인](docs/media/alert-flow/02-confirm.txt) → [등록](docs/media/alert-flow/03-register.txt) → [감시](docs/media/alert-flow/04-watch.txt) → [알림](docs/media/alert-flow/05-notify.txt) → [Ctrl+C 중지](docs/media/alert-flow/06-stop.txt)까지 이어서 실행했습니다([요약](docs/media/alert-flow/summary.json)). 실제로 표시된 [Windows 알림 화면](docs/media/alert-flow/notification.png)도 남겼습니다.
+- **실제 CLI 기록:** [실행 요약](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/summary.json), [변경 전 경계 테스트](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/mhg-before-tests.txt), [수정 예제 경계 테스트](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/mhg-after-tests.txt), [상담 문구 점검](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/mrc-lint.txt), [반대매매 가드](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/margin-guard.txt), [달러 조건 룰](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/usd-rule.txt).
+- **가격 알림 실사용 흐름 (0.7.0):** 빈 작업 폴더에서 [초안](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/01-draft.txt) → [조건 확인](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/02-confirm.txt) → [등록](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/03-register.txt) → [감시](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/04-watch.txt) → [알림](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/05-notify.txt) → [Ctrl+C 중지](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/06-stop.txt)까지 이어서 실행했습니다([요약](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/summary.json)). 실제로 표시된 [Windows 알림 화면](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/notification.png)도 남겼습니다.
   - **1~6단계는 합성 시세(`demo-fixture`)입니다.** 조건이 맞도록 만든 가짜 가격이며, 알림 제목에 `[DEMO]`가 붙습니다.
-  - **[7단계](docs/media/alert-flow/07-real-quote.txt)는 실제 시세(Yahoo Finance)입니다.** 같은 룰을 실제 시세로 한 번 평가했습니다. 카카오는 Yahoo에 애프터마켓 시세가 없어 마지막 시세가 1시간 넘게 지난 정규장 종가였고, `STALE_QUOTE`로 알리지 않았습니다. TSLA는 미국 정규장 밖이라 `WAIT`였습니다.
-  - **[미국 정규장 실제 시세 알림](docs/media/us-real-alert/alert.txt)은 발송됐습니다.** 2026-11-18 미국 정규장(09:43~09:48 EST)에 TSLA·AAPL·NVDA 시세를 30초 간격으로 10번씩 받았더니 시세 나이가 모두 0~2초였습니다([표본](docs/media/us-real-alert/quotes.txt)). 이어서 반드시 맞는 조건(TSLA 10,000달러 이하)으로 등록한 실제 시세 알림이 `[DEMO]` 없이 Windows에 제출됐습니다([알림 화면](docs/media/us-real-alert/notification.png), [요약](docs/media/us-real-alert/summary.json)).
-- **화면 촬영:** [캡처 안내와 현재 상태](docs/media/CAPTURE.md). 위 CLI 기록은 Codex 앱 화면 캡처나 실시간 수정 녹화가 아닙니다. 알림 화면만 실제 바탕화면을 잘라 저장했습니다.
+  - **[7단계](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/07-real-quote.txt)는 실제 시세(Yahoo Finance)입니다.** 같은 룰을 실제 시세로 한 번 평가했습니다. 카카오는 Yahoo에 애프터마켓 시세가 없어 마지막 시세가 1시간 넘게 지난 정규장 종가였고, `STALE_QUOTE`로 알리지 않았습니다. TSLA는 미국 정규장 밖이라 `WAIT`였습니다.
+  - **[미국 정규장 실제 시세 알림](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/us-real-alert/alert.txt)은 발송됐습니다.** 2026-11-18 미국 정규장(09:43~09:48 EST)에 TSLA·AAPL·NVDA 시세를 30초 간격으로 10번씩 받았더니 시세 나이가 모두 0~2초였습니다([표본](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/us-real-alert/quotes.txt)). 이어서 반드시 맞는 조건(TSLA 10,000달러 이하)으로 등록한 실제 시세 알림이 `[DEMO]` 없이 Windows에 제출됐습니다([알림 화면](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/us-real-alert/notification.png), [요약](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/us-real-alert/summary.json)).
+- **화면 촬영:** [캡처 안내와 현재 상태](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/CAPTURE.md). 위 CLI 기록은 Codex 앱 화면 캡처나 실시간 수정 녹화가 아닙니다. 알림 화면만 실제 바탕화면을 잘라 저장했습니다.
 
 CLI 기록은 `python tools/record_demo_evidence.py`로, 가격 알림 흐름은 `python tools/record_alert_flow.py --screenshot`(KRX 정규장 또는 애프터마켓 시간에 실행)으로, 미국 실제 시세 기록은 `python tools/record_us_real_alert.py --screenshot`(미국 정규장, 한국시간 겨울 23:30~06:00·여름 22:30~05:00)으로 다시 생성할 수 있습니다. 작업·사용자 경로 접두어만 가렸고 AI 전체 대화 로그는 변경하지 않았습니다.
 
 ## 배경
 
-2026년 AX 인재전쟁 해커톤의 카카오페이증권 과제에서 시작했습니다. 처음 만든 기능(감정적 매매를 안전한 룰 초안으로 바꾸기)은 회사 고유의 문제라는 공개 근거가 약했습니다. 그래서 이후 공개 자료로 입증되는 문제를 다시 찾았고, 문제와 해결이 직접 이어지는 기능 중심으로 다시 설계했습니다. 주제 선정 과정과 결정 기록은 [docs/reboot/](docs/reboot/DECISION_LOG.md)에 있습니다.
+2026년 AX 인재전쟁 해커톤의 카카오페이증권 과제에서 시작했습니다. 처음 만든 기능(감정적 매매를 안전한 룰 초안으로 바꾸기)은 회사 고유의 문제라는 공개 근거가 약했습니다. 그래서 이후 공개 자료로 입증되는 문제를 다시 찾았고, 문제와 해결이 직접 이어지는 기능 중심으로 다시 설계했습니다. 주제 선정 과정과 결정 기록은 [docs/reboot/](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/reboot/DECISION_LOG.md)에 있습니다.
 
 ## 누가, 무엇을 하나
 
@@ -36,7 +36,7 @@ CLI 기록은 `python tools/record_demo_evidence.py`로, 가격 알림 흐름은
 | --- | --- | --- | --- |
 | **사내 개발자·QA** | `market-hours-guard` | 거래시간 제도 변경(애프터마켓, SOR 적용 시간, 미국 서머타임)과 특수일(수능일)·휴장일을 코드·설정에 빠짐없이 반영했는지 점검하고 경계 시각 테스트로 확인 | MTS 장애 42건, 대형 12개사 중 공동 1위·4년 연속 증가한 유일한 회사(금감원 자료). 애프터마켓 개장 첫날 SOR 시간 변경 과정의 장애 |
 | **사내 상담 품질·QA·개발자** | `margin-rule-check` | 상담 스크립트·안내 문구·앱 설정·계산 코드의 담보비율·반대매매 일정이 공식 규칙과 맞는지 점검 | 상담 과정의 담보비율 오안내(120%로 안내, 실제 140%) 보도, 상반기 민원 829% 증가 |
-| **일반 투자자** | `safe-trade-rule-builder` | 반대매매 기한·필요 금액·한시 유예를 출처와 함께 계산하고, 매매 요청을 수동 확인이 필요한 안전한 룰 초안으로 변환 | 신용공여 1년 새 168.5% 증가, 2026-11-06 반대매매 한시 유예 공지 |
+| **일반 투자자** | `safe-trade-rule-builder` | 반대매매 기한·필요 금액·한시 유예를 출처와 함께 계산하고, 매매 요청을 수동 확인이 필요한 안전한 룰 초안으로 변환. 확인한 가격 알림은 PC에서 감시해 Windows 알림으로 보냄(주문 없음) | 신용공여 1년 새 168.5% 증가, 2026-11-06 반대매매 한시 유예 공지 |
 
 ## 동작 방식
 
@@ -46,9 +46,10 @@ CLI 기록은 `python tools/record_demo_evidence.py`로, 가격 알림 흐름은
   → Codex가 스크립트를 실행 (매매 요청은 Codex가 룰 JSON으로 만들어 전달)
   → 스크립트가 출처 붙은 규칙 파일로 계산·판정 (같은 입력이면 같은 결과)
   → Codex가 결과를 설명하고, 필요하면 코드·문서를 고친 뒤 다시 검사
+  → (가격 알림) 사용자가 확인하면 Codex가 등록까지 하고, 감시는 PC 터미널의 로컬 프로세스가 이어서 맡음
 ```
 
-별도 화면은 없고 Codex 채팅이 곧 인터페이스입니다. 같은 플러그인은 ChatGPT에서도 설치할 수 있습니다.
+별도 화면은 없고 Codex 채팅이 곧 인터페이스입니다. 가격 알림만 Windows 작업 표시줄 알림으로 옵니다. 같은 플러그인은 ChatGPT에서도 설치할 수 있습니다.
 
 ## 설치와 실행
 
@@ -89,6 +90,7 @@ Windows 콘솔에서 한글이 깨지면 `$env:PYTHONIOENCODING="utf-8"`을 먼�
    - "SOR 적용 시간이 20:00까지 늘어난 변경과 수능일 시간 변경이 이 저장소에 반영됐는지 점검해줘."
    - "상담 스크립트와 앱 설정에 담보비율 안내가 규칙과 다르게 적힌 곳을 찾아줘."
    - "담보비율 120%만 맞추면 반대매매 안 되지?"
+   - "테슬라가 200달러 아래로 내려가면 알려줘. 10분에 한 번만." (확인 후 등록하고, 감시 명령을 안내합니다)
 
 ## 1. 거래시간 변경 점검기 (`market-hours-guard`, 사내 개발자·QA)
 
@@ -187,7 +189,7 @@ python src/skills/safe-trade-rule-builder/scripts/rule_builder.py --intent "카�
 
 > **알려진 한계: 국내(KRX) 종목은 실제 시세로 알림이 사실상 발송되지 않습니다.**
 > - 감시는 15초보다 오래된 시세로는 알리지 않습니다. Yahoo의 KRX 시세는 20분 지연("Delayed Quote")이고 애프터마켓 시세는 없습니다. 그래서 국내 종목을 `yfinance` 공급자로 등록하면 가격 조건이 맞아도 `STALE_QUOTE`로 멈춥니다. 이 경우 `alert_watch.py add`가 등록 결과에 `KRX_QUOTES_DELAYED` 경고를 붙이고 삭제 명령을 안내합니다.
-> - 미국 종목은 정규장 중에 알림이 나갑니다. 2026-11-18 미국 정규장에 잰 시세 나이는 0~2초였고, 실제 시세 TSLA 알림이 Windows에 제출됐습니다([기록](docs/media/us-real-alert/alert.txt)). Yahoo는 이 시세에도 "15분 지연" 값을 붙이지만, 출처는 "Nasdaq Real Time Price"로 표시되고 실측도 실시간이었습니다. 5분간 측정한 값이므로 Yahoo의 제공 방식이 바뀌면 달라질 수 있습니다.
+> - 미국 종목은 정규장 중에 알림이 나갑니다. 2026-11-18 미국 정규장에 잰 시세 나이는 0~2초였고, 실제 시세 TSLA 알림이 Windows에 제출됐습니다([기록](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/us-real-alert/alert.txt)). Yahoo는 이 시세에도 "15분 지연" 값을 붙이지만, 출처는 "Nasdaq Real Time Price"로 표시되고 실측도 실시간이었습니다. 5분간 측정한 값이므로 Yahoo의 제공 방식이 바뀌면 달라질 수 있습니다.
 > - 미국 정규장 밖(장 전·장 후)에는 시세 시각이 마지막 정규장 종가에 머물러 알리지 않습니다.
 > - 지연된 가격으로 "떨어졌다"고 알리면 이미 움직인 시장을 보고 판단하게 되므로 15초 기준은 완화하지 않았습니다. 국내 종목을 실제 시세로 알리려면 실시간 시세 공급자 연결이 필요합니다.
 
@@ -248,6 +250,7 @@ python "$scripts/alert_watch.py" remove <rule-id>
 - **모든 기준값에 출처.** 거래시간, 휴장일, 140%·120%, 한시 유예, 수능일 일정은 출처 ID가 붙은 설정 파일에만 있고, 출처 없는 규칙은 로드 단계에서 거부합니다.
 - **같은 기준 공유.** 런타임 세션 설정과 거래시간 기준표, 투자자용 반대매매 계산과 사내용 규칙 점검이 같은 값을 쓰는지 테스트가 지킵니다.
 - **확인 못 하면 통과 안 함.** 공지되지 않은 세션, 휴장일 달력 범위 밖 날짜, 통화가 다른 가격 조건, 단일 시세로 확인할 수 없는 조건, 저장소·설정 오류는 모두 `WAIT`나 `STOP`으로 처리합니다.
+- **감시는 로컬 프로세스, 오래된 시세로는 알리지 않음.** Codex는 대화가 진행되는 동안만 동작하고, 웹에서 읽은 가격은 몇 초 전 값인지 확인할 수 없습니다. 그래서 Codex를 시세 공급원으로 쓰지 않고 등록까지만 맡깁니다. 감시는 PC의 로컬 프로세스가 맡아 시세 원래 시각으로 나이를 다시 계산하고, 15초보다 오래된 시세로는 알리지 않습니다. 이미 움직인 가격으로 판단하게 하지 않으려는 것이며, 그 대가로 Yahoo가 20분 늦게 주는 국내 종목은 알림이 나가지 않는 한계를 받아들였습니다.
 
 ## 검증
 
@@ -268,13 +271,19 @@ src/                                  # Codex 플러그인 루트
 ├── skills/
 │   ├── market-hours-guard/           # 사내 개발자·QA: 거래시간 변경 점검
 │   ├── margin-rule-check/            # 사내 상담 품질·QA·개발자: 신용거래 규칙 점검
-│   └── safe-trade-rule-builder/      # 일반 투자자: 반대매매 가드 + 안전 매매 룰
+│   └── safe-trade-rule-builder/      # 일반 투자자: 반대매매 가드 + 안전 매매 룰 + 가격 알림(alert_watch.py)
 ├── runtime/                          # 룰을 평가하는 로컬 런타임 (세션 설정 공용)
 ├── docs/                             # 근거·설계 문서, 프로젝트 요약
 └── requirements.txt
 tests/                                # 스킬·런타임·로컬 알림 테스트
 docs/reboot/                          # 주제 선정 과정, 결정 기록, 보관 자료
-tools/package_submission.py           # 해커톤 제출용 패키징 도구(기록용)
+docs/media/                           # 실제 CLI 실행 기록과 알림 화면 (demo-evidence, alert-flow, us-real-alert)
+tools/
+├── record_demo_evidence.py           # 사내용 스킬·반대매매 가드 실행 기록 생성
+├── record_alert_flow.py              # 가격 알림 흐름 기록 (합성 시세 + 국내 실제 시세 1회)
+├── record_us_real_alert.py           # 미국 정규장 실제 시세 나이 측정과 실제 알림 1회
+├── package_submission.py             # 해커톤 제출 zip 생성
+└── save_log.py                       # 해커톤 제공 대화 로그 저장 훅
 ```
 
 ## 한계
@@ -302,3 +311,7 @@ tools/package_submission.py           # 해커톤 제출용 패키징 도구(기
   - 사내용 스킬 두 개가 JUnit 5 테스트도 만들고(Java·Kotlin 저장소), 신용 규칙 점검이 Word(.docx)를 읽습니다. 공개 증권 저장소 5곳으로 거래시간 점검기를 평가해 오탐 원인 3가지를 고쳤습니다.
   - 두 사내용 스킬이 SARIF로 결과를 내보내 PR 화면에 표시하고, 거래시간 점검기에 기준표 변경 영향 미리보기(`impact`)를 더했습니다. 수능일 기준값이 우연히 MATCH 되던 문제를 고쳤습니다(값만 같은 MATCH 37건 → 20건).
   - 달러 가격 조건과 사내용 신용 규칙 점검을 추가하고, CI 린트를 다시 켰습니다.
+- **2026-11 (0.7.0 가격 알림):**
+  - 확인한 알림 전용 룰을 로컬 SQLite에 등록하고, 로컬 감시 프로세스가 60초마다 평가해 Windows 알림으로 보냅니다(일시정지·재개·삭제, 쿨다운, 이력 보존, 주문 없음).
+  - 빈 작업 폴더에서 초안부터 Ctrl+C 중지까지 실행해 기록했고, 미국 정규장 실제 시세(시세 나이 0~2초)로 실제 알림이 나가는 것을 확인했습니다.
+  - 국내 종목은 Yahoo 시세 지연으로 알림이 나가지 않는 한계를 명시하고, 그런 룰을 등록하면 CLI가 경고합니다.

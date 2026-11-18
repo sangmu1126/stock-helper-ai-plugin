@@ -43,7 +43,7 @@
 ## 품질 지표
 
 - 테스트 359개(파이썬 경로 설정 없이 통과), ruff 린트와 함께 GitHub Actions CI에서 실행. 생성된 JUnit 테스트도 CI에서 실제 JDK로 실행
-- 가격 알림은 빈 작업 폴더에서 초안 → 확인 → 등록 → 감시 → Windows 알림 → Ctrl+C 중지까지 실행해 기록 ([docs/media/alert-flow](../../docs/media/alert-flow/summary.json), 합성 시세). 미국 정규장에서는 실제 시세(시세 나이 0~2초)로 TSLA 알림이 발송됨 ([docs/media/us-real-alert](../../docs/media/us-real-alert/summary.json))
+- 가격 알림은 빈 작업 폴더에서 초안 → 확인 → 등록 → 감시 → Windows 알림 → Ctrl+C 중지까지 실행해 기록 ([docs/media/alert-flow](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/summary.json), 합성 시세). 미국 정규장에서는 실제 시세(시세 나이 0~2초)로 TSLA 알림이 발송됨 ([docs/media/us-real-alert](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/us-real-alert/summary.json))
 - 공개 증권 저장소 5곳(한국투자·키움 공식 예제 등) 평가: 오탐 769건 중 547건 → 원인 3가지 수정 후 223건 중 0건, 한국투자 공식 예제에서 폐지된 시간외 단일가 안내 9곳 발견 ([MARKET_HOURS_REAL_REPOS.md](MARKET_HOURS_REAL_REPOS.md))
 - 합성 저장소·가상 계좌·가상 상담 자료로 수정 전후를 재현
 
