@@ -26,6 +26,9 @@ SKIP_DIRS = {
     ".git", ".hg", ".svn", "node_modules", ".venv", "venv", "__pycache__", "dist", "build",
     "target", ".gradle", ".idea", ".mypy_cache", ".pytest_cache", ".ruff_cache", "mhg-output",
 }
+# IDE(Eclipse·VS Code Java·IntelliJ)의 컴파일 결과 폴더. 설정 파일 사본이 들어 있어 중복 판정이 생긴다.
+# 스크립트를 두는 bin/도 흔하므로 .class 파일이 있을 때만 건너뛴다.
+COMPILED_OUTPUT_DIRS = {"bin", "out"}
 GENERATED_MARKER = "mhg:generated"
 MAX_BYTES = 1_000_000
 
@@ -233,6 +236,12 @@ def _wanted(name: str, suffixes: set[str]) -> bool:
     return Path(name).suffix.lower() in suffixes
 
 
+def compiled_output_dir(path: Path) -> bool:
+    if path.name not in COMPILED_OUTPUT_DIRS:
+        return False
+    return any(name.endswith(".class") for _, _, files in os.walk(path) for name in files)
+
+
 def iter_files(root: Path, include_docs: bool = False, exclude: tuple[Path, ...] = ()):
     suffixes = CODE_SUFFIXES | CONFIG_SUFFIXES | (DOC_SUFFIXES if include_docs else set())
     excluded = tuple(p.resolve() for p in exclude)
@@ -241,6 +250,7 @@ def iter_files(root: Path, include_docs: bool = False, exclude: tuple[Path, ...]
         dirnames[:] = sorted(
             d for d in dirnames
             if d not in SKIP_DIRS and (current / d).resolve() not in excluded
+            and not compiled_output_dir(current / d)
         )
         for name in sorted(filenames):
             if _wanted(name, suffixes):

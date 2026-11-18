@@ -196,6 +196,18 @@ def test_lint_reads_docx_and_reports_paragraph_numbers(tmp_path):
     assert "문단 번호" in (tmp_path / "out" / "report.md").read_text(encoding="utf-8")
 
 
+def test_ide_compiled_output_is_not_linted_twice(tmp_path):
+    """IDE 컴파일 결과(bin/)의 설정 사본은 건너뛰고, .class가 없는 bin/은 그대로 읽는다."""
+    text = "담보비율이 120% 이상이면 반대매매는 되지 않습니다.\n"
+    (tmp_path / "notice.md").write_text(text, encoding="utf-8")
+    (tmp_path / "bin" / "main").mkdir(parents=True)
+    (tmp_path / "bin" / "main" / "notice.md").write_text(text, encoding="utf-8")
+    (tmp_path / "bin" / "main" / "App.class").write_bytes(b"\xca\xfe\xba\xbe")
+    (tmp_path / "docs" / "bin").mkdir(parents=True)
+    (tmp_path / "docs" / "bin" / "faq.md").write_text(text, encoding="utf-8")
+    assert sorted(f.path for f in lint_repo(tmp_path, RULES)) == ["docs/bin/faq.md", "notice.md"]
+
+
 def test_unreadable_docx_is_flagged_for_review(tmp_path):
     (tmp_path / "broken.docx").write_bytes(b"not a zip")
     findings = lint_repo(tmp_path, RULES)

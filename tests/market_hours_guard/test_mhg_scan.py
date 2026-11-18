@@ -88,6 +88,20 @@ def test_generated_files_are_skipped(tmp_path, calendar, examples):
     assert all(f.path != "tests/gen.py" for f in result.findings)
 
 
+def test_ide_compiled_output_is_not_scanned_twice(tmp_path, calendar):
+    """VS Code Java 확장이 만든 bin/main/application.yml 사본이 같은 판정을 한 번 더 내던 문제."""
+    config = 'cron: "0 30 15 * * MON-FRI"  # KRX 정규장 마감\n'
+    (tmp_path / "src" / "main" / "resources").mkdir(parents=True)
+    (tmp_path / "src" / "main" / "resources" / "application.yml").write_text(config, encoding="utf-8")
+    (tmp_path / "bin" / "main").mkdir(parents=True)
+    (tmp_path / "bin" / "main" / "application.yml").write_text(config, encoding="utf-8")
+    (tmp_path / "bin" / "main" / "App.class").write_bytes(b"\xca\xfe\xba\xbe")
+    (tmp_path / "tools" / "bin").mkdir(parents=True)
+    (tmp_path / "tools" / "bin" / "close.sh").write_text('CLOSE="15:30"  # KRX 정규장 마감\n', encoding="utf-8")
+    paths = sorted({f.path for f in scan_repo(tmp_path, calendar).findings})
+    assert paths == ["src/main/resources/application.yml", "tools/bin/close.sh"]
+
+
 def test_files_over_size_limit_are_listed_in_report(tmp_path, calendar):
     """크기 제한으로 읽지 않은 파일은 결과와 보고서에 이름이 나온다(실제 저장소 평가에서 키움 API 명세 3.8MB가 조용히 빠졌음)."""
     from market_hours_guard.extract import MAX_BYTES

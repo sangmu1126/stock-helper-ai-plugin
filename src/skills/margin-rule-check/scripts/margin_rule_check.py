@@ -31,6 +31,8 @@ from mrc_sarif import to_sarif
 SUFFIXES = {".md", ".txt", ".html", ".json", ".yaml", ".yml", ".properties", ".toml", ".py", ".kt", ".java",
             ".ts", ".tsx", ".js", ".csv", ".docx"}
 SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build", "mrc-output"}
+# IDE 컴파일 결과(bin/·out/)는 설정·문서 사본을 담아 중복 판정을 만든다. .class가 있을 때만 건너뛴다.
+COMPILED_OUTPUT_DIRS = {"bin", "out"}
 GENERATED_MARKER = "mrc:generated"
 COLLATERAL_WORDS = ("담보", "반대매매", "collateral", "margin", "신용", "유예", "liquidation", "maintenance", "grace")
 ROLE_WORDS = {
@@ -196,6 +198,10 @@ def lint_text(path: str, text: str, rules: dict[str, Any]) -> list[Finding]:
 def lint_repo(repo: Path, rules: dict[str, Any], exclude: tuple[Path, ...] = ()) -> list[Finding]:
     findings: list[Finding] = []
     excluded = {p.resolve() for p in exclude}
+    excluded |= {
+        d.resolve() for d in repo.rglob("*")
+        if d.is_dir() and d.name in COMPILED_OUTPUT_DIRS and any(d.rglob("*.class"))
+    }
     for file in sorted(repo.rglob("*")):
         if not file.is_file() or file.suffix.lower() not in SUFFIXES:
             continue

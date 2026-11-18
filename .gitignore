@@ -16,7 +16,8 @@ mhg-output/
 mrc-output/
 # Local alert registrations, account/draft outputs and notification history
 rule-output/
-# Java 시연 예제의 Gradle·javac 빌드 결과
+# Java 시연 예제의 Gradle·javac·IDE(VS Code Java) 빌드 결과
 .gradle/
 src/skills/*/examples/*/build/
 src/skills/*/examples/*/out/
+src/skills/*/examples/*/bin/
