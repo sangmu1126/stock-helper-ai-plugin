@@ -1,0 +1,8 @@
+## 알림 이력(제출 기록, 실주문 없음)
+time: 2026-11-18 16:41:41 KST
+command: python <repo>\src\skills\safe-trade-rule-builder\scripts\alert_watch.py --db <fresh-workspace>\rule-output\alerts.sqlite3 events
+exit_code: 0 (expected 0) expectation_met: True
+STDOUT
+[{"attempted_at": 1794987639, "detail": null, "id": 1, "message": "Condition matched: 68000 KRW (quote time 2026-11-18 16:40:39 KST). No order submitted.", "quote_timestamp": 1794987639, "rule_id": "78fb2ab4b993ac4fc2e9", "status": "submitted"}]
+STDERR
+

@@ -10,6 +10,14 @@ Computer Use의 node_repl 초기화와 커널 초기화 후 재시도에서 모�
 
 공개용 CLI 기록은 작업·사용자 경로 접두어를 가리고 줄바꿈·행 끝 공백만 정규화했습니다. 전체 AI 대화 로그는 편집하지 않았습니다.
 
+### 가격 알림 흐름 (0.7.0)
+
+`alert-flow/`에는 빈 작업 폴더에서 초안 → 조건 확인 → 등록 → 감시 → Windows 알림 → Ctrl+C 중지까지 이어서 실행한 기록이 있습니다(`python tools/record_alert_flow.py --screenshot`).
+
+- 1~6단계는 합성 시세(`demo-fixture`)라 알림 제목에 `[DEMO]`가 붙습니다. 7단계만 실제 시세(Yahoo Finance)이며, 실제 시세로 알림이 발송된 기록은 아직 없습니다.
+- `alert-flow/notification.png`는 실제로 표시된 Windows 알림을 촬영한 것입니다. 알림과 작업 표시줄 시계만 남기고 잘랐습니다.
+- 이것도 CLI 실행이며, Codex 앱에서 대화로 진행한 화면은 아닙니다. 앱 화면은 아래 4번으로 촬영합니다.
+
 ## 촬영 순서
 
 앱에서 최신 플러그인을 설치·로드한 다음 아래 요청을 실행합니다. 별도 테스트 폴더를 사용하고 원본 예제는 보존합니다.
@@ -19,7 +27,7 @@ Computer Use의 node_repl 초기화와 커널 초기화 후 재시도에서 모�
 | 1 | `src/skills/market-hours-guard/examples/toy-broker를 임시 폴더에 복사해서 SOR 20:00 연장, 미국 DST, 수능일, 연말 휴장일 반영을 검사하고 고쳐줘. 기존 calendar.demo.toml을 사용하고 원본 예제는 수정하지 마.` | 스킬 호출, 실제 스캔, 수정 diff의 mhg 주석, 테스트 전후 결과 | `mhg-demo.gif` |
 | 2 | `src/skills/margin-rule-check/examples/support-docs 상담 스크립트와 설정을 신용 규칙과 대조해줘.` | 고칠 것 5건과 수정 제안 | `mrc-lint.png` |
 | 3 | `src/skills/safe-trade-rule-builder/examples/margin/misguided_after_deposit.json을 점검해줘. 120%를 넘겼으니 반대매매를 피할 수 있나?` | 127.2% 계좌의 오해 교정, 기한, 필요한 금액, 가정 | `margin-guard.png` |
-| 4 | `테슬라가 200달러 아래로 내려가면 알려줘.` | USD 가격 조건, 실제 주문·상시 감시가 아님을 설명 | `usd-rule.png` |
+| 4 | `카카오가 애프터마켓에서 전일 종가보다 3% 떨어지면 알려줘. 10분에 한 번만. 시연이니 demo-fixture 시세로 등록하고 감시를 시작해줘.` (KRX 16:00~20:00에 실행) | 초안 확인 → 확인 후 등록 → `run` 터미널 → `[DEMO]` Windows 알림 → Ctrl+C 중지와 `status` | `alert-flow.gif` |
 
 저장 위치는 `docs/media/`입니다. PNG/GIF가 실제로 존재하고 내용 검토가 끝난 뒤에만 README에 이미지 링크를 추가합니다. 현재 README에는 없는 이미지 링크를 넣지 않았습니다.
 

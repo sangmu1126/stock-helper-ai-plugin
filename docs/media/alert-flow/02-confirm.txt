@@ -1,0 +1,22 @@
+# 2. 조건 확인
+사용자에게 보여 주고 확인받는 값:
+- 종목: "Kakao Corp (035720.KS)"
+- 조건: {"type": "price_drop_percent", "reference": "previous_close", "percent": 3.0, "currency": "KRW"}
+- 행동: "notify_only / notify_only"
+- 세션: {"market_session": "after_hours"}
+- 쿨다운: {"min_minutes_between_triggers": 10}
+- 취소 조건: [{"type": "quote_stale"}]
+- 정책: "ALLOW"
+- 시세 출처: "demo-fixture (합성 데이터, 실제 시세 아님) - 알림 제목에 [DEMO] 표시"
+
+## 확인 없이 등록 시도는 거부
+time: 2026-11-18 16:40:38 KST
+command: python <repo>\src\skills\safe-trade-rule-builder\scripts\alert_watch.py --db <fresh-workspace>\rule-output\alerts.sqlite3 add --draft rule-output/draft.json --intent "카카오가 애프터마켓에서 전일 종가보다 3% 떨어지면 알려줘. 10분에 한 번만." --provider demo-fixture
+exit_code: 2 (expected 2) expectation_met: True
+STDOUT
+STDERR
+usage: alert_watch.py [-h] [--db DB]
+                      {add,list,events,status,pause,resume,remove,run,test-notification,setup-notifications}
+                      ...
+alert_watch.py: error: Review the draft, then pass --confirm to register it. Registration does not start monitoring.
+

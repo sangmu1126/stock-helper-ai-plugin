@@ -1,0 +1,24 @@
+## 확인 후 등록(감시는 아직 시작 안 함)
+time: 2026-11-18 16:40:38 KST
+command: python <repo>\src\skills\safe-trade-rule-builder\scripts\alert_watch.py --db <fresh-workspace>\rule-output\alerts.sqlite3 add --draft rule-output/draft.json --intent "카카오가 애프터마켓에서 전일 종가보다 3% 떨어지면 알려줘. 10분에 한 번만." --provider demo-fixture --confirm
+exit_code: 0 (expected 0) expectation_met: True
+STDOUT
+{"db": "<fresh-workspace>\\rule-output\\alerts.sqlite3", "monitoring_started": false, "registered_rule_id": "78fb2ab4b993ac4fc2e9"}
+STDERR
+
+## 상태: 감시 프로세스 없음, 활성 룰 1개
+time: 2026-11-18 16:40:39 KST
+command: python <repo>\src\skills\safe-trade-rule-builder\scripts\alert_watch.py --db <fresh-workspace>\rule-output\alerts.sqlite3 status
+exit_code: 0 (expected 0) expectation_met: True
+STDOUT
+{"active_rules": 1, "db": "<fresh-workspace>\\rule-output\\alerts.sqlite3", "monitoring_running": false}
+STDERR
+
+## 등록 목록
+time: 2026-11-18 16:40:39 KST
+command: python <repo>\src\skills\safe-trade-rule-builder\scripts\alert_watch.py --db <fresh-workspace>\rule-output\alerts.sqlite3 list
+exit_code: 0 (expected 0) expectation_met: True
+STDOUT
+[{"created_at": 1794987638, "enabled": 1, "id": "78fb2ab4b993ac4fc2e9", "intent": "카카오가 애프터마켓에서 전일 종가보다 3% 떨어지면 알려줘. 10분에 한 번만.", "last_attempt": null, "last_checked": null, "last_notified": null, "last_result": null, "payload": "{\"action\": \"notify_only\", \"ambiguities\": [], \"asset\": {\"name\": \"Kakao Corp\", \"symbol\": \"035720.KS\"}, \"cancel_conditions\": [{\"type\": \"quote_stale\"}], \"cooldown\": {\"min_minutes_between_triggers\": 10}, \"emotional_risk_flags\": [], \"execution_mode\": \"notify_only\", \"order\": {\"currency\": \"KRW\", \"mode\": \"required_before_activation\"}, \"parser\": {\"ambiguous_fields\": [], \"fallback_used\": false, \"normalized_from\": {}, \"notes\": [\"Structured by Codex from the user's sentence and validated against the ParsedRule schema.\", \"Structured by Codex from the user's sentence and validated against the ParsedRule schema.\"], \"source\": \"codex\", \"warnings\": []}, \"time_window\": {\"market_session\": \"after_hours\"}, \"trigger\": {\"currency\": \"KRW\", \"percent\": 3.0, \"reference\": \"previous_close\", \"type\": \"price_drop_percent\"}}", "provider": "demo-fixture"}]
+STDERR
+

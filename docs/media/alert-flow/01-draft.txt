@@ -1,0 +1,87 @@
+# 1. 초안
+사용자 문장: 카카오가 애프터마켓에서 전일 종가보다 3% 떨어지면 알려줘. 10분에 한 번만.
+Codex가 구조화한 룰 JSON(rule.json):
+{
+  "asset": {
+    "symbol": "035720.KS",
+    "name": "Kakao Corp"
+  },
+  "trigger": {
+    "type": "price_drop_percent",
+    "reference": "previous_close",
+    "percent": 3
+  },
+  "action": "notify_only",
+  "execution_mode": "notify_only",
+  "time_window": {
+    "market_session": "after_hours"
+  },
+  "cooldown": {
+    "min_minutes_between_triggers": 10
+  },
+  "cancel_conditions": [
+    {
+      "type": "quote_stale"
+    }
+  ],
+  "emotional_risk_flags": [],
+  "ambiguities": []
+}
+
+## rule_builder: 초안 저장과 리포트
+time: 2026-11-18 16:40:38 KST
+command: python <repo>\src\skills\safe-trade-rule-builder\scripts\rule_builder.py --intent "카카오가 애프터마켓에서 전일 종가보다 3% 떨어지면 알려줘. 10분에 한 번만." --rule-json rule.json --save-draft rule-output/draft.json --format markdown
+exit_code: 0 (expected 0) expectation_met: True
+STDOUT
+# 안전 매매 룰 리포트
+
+이 리포트는 자연어 매매 의도를 기계적인 룰 초안으로 설명합니다. 투자 조언이 아니며 주문을 제출하지 않습니다.
+
+## 1. 추출된 룰
+
+- 파서: `codex` (fallback: `False`)
+- 종목: `Kakao Corp` (`035720.KS`)
+- 조건: `previous_close 대비 3.0% 하락`
+- 행동: `알림만 전송`
+- 주문 한도: `활성화 전 입력 필요`
+- 실행 방식: `알림 전용`
+- 시간 조건: `장 구분=after_hours`
+- 쿨다운: `10분 간격`
+- 취소 조건: `시세 지연`
+- 파서 메모: `Structured by Codex from the user's sentence and validated against the ParsedRule schema.`
+- 알림 등록: 아직 미등록. 초안 확인 후 alert_watch.py add로 등록하고 run 감시 프로세스를 시작해야 합니다.
+
+## 2. 안전 상태
+
+- 감정 점검: 감정적 표현이 감지되지 않았습니다.
+- 시장 데이터 헬스체크: 이번 실행에서는 확인하지 않았습니다.
+- 현재 조건 평가: 이번 실행에서는 평가하지 않았습니다.
+- 백테스트 안전성: 이번 실행에서는 시뮬레이션하지 않았습니다.
+- 정책 판단: `ALLOW` / `NOTIFY_ONLY_WITH_NO_ORDER_PERMISSION`
+- 최종 결정: `WAIT` / `TRIGGER_NOT_EVALUATED`
+
+## 3. 해석
+
+- 룰은 정의됐지만, 현재 정보만으로는 수동 확인 단계로 넘어갈 근거가 충분하지 않습니다.
+- 금액 한도, 기준가, 쿨다운, 취소 조건을 더 명확히 하면 룰이 안전해집니다.
+
+## 4. 백테스트 상세
+
+- 백테스트를 요청하지 않았습니다.
+
+## 5. 확인 체크리스트
+
+- 현재 결정에는 사용자 확인 체크리스트가 필요하지 않습니다.
+
+## 6. 다음 확인 질문
+
+- 가격 조건이 맞더라도 이 룰을 취소해야 하는 상황이 있다면 알려 주세요.
+
+## 7. 안전 고지
+
+- 이 결과를 매수/매도 추천으로 해석하지 마세요.
+- 이 프로토타입은 실주문을 제출하지 않습니다.
+- 모든 누락 한도와 중단 조건을 채운 뒤에도 다음 단계는 수동 확인입니다.
+
+STDERR
+

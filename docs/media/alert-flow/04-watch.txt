@@ -1,0 +1,49 @@
+# 4. 감시
+time: 2026-11-18 16:40:39 KST
+command: python alert_watch.py --db <db> run --interval 60
+(감시 프로세스 출력은 이 파일 끝에 시각과 함께 붙는다)
+
+## 1회차: 조건 충족 -> Windows 알림 제출
+time: 2026-11-18 16:40:43 KST
+expectation_met: True
+[
+  {
+    "notification_id": 1,
+    "reason": "SUBMITTED_TO_WINDOWS",
+    "receipt": {
+      "backend": "windows-toasts",
+      "display_confirmed": false,
+      "notification_setting": "ENABLED"
+    },
+    "rule_id": "78fb2ab4b993ac4fc2e9",
+    "status": "NOTIFY_ONLY"
+  }
+]
+
+## 감시 중 상태
+time: 2026-11-18 16:40:43 KST
+command: python <repo>\src\skills\safe-trade-rule-builder\scripts\alert_watch.py --db <fresh-workspace>\rule-output\alerts.sqlite3 status
+exit_code: 0 (expected 0) expectation_met: True
+STDOUT
+{"active_rules": 1, "db": "<fresh-workspace>\\rule-output\\alerts.sqlite3", "monitoring_running": true}
+STDERR
+
+## 두 번째 감시 프로세스는 거부(같은 DB)
+time: 2026-11-18 16:40:43 KST
+command: python <repo>\src\skills\safe-trade-rule-builder\scripts\alert_watch.py --db <fresh-workspace>\rule-output\alerts.sqlite3 run --once
+exit_code: 2 (expected 2) expectation_met: True
+STDOUT
+STDERR
+Alert watcher error: Another watcher is already using this database.
+
+## 2회차(60초 뒤): 쿨다운으로 재알림 안 함
+time: 2026-11-18 16:41:41 KST
+expectation_met: True
+[{"reason": "COOLDOWN_ACTIVE", "rule_id": "78fb2ab4b993ac4fc2e9", "status": "WAIT"}]
+
+### 감시 프로세스 출력
+[2026-11-18 16:40:39 KST] Local watcher running; keep this process and PC awake. Ctrl+C stops it.
+[2026-11-18 16:40:41 KST] [{"notification_id": 1, "reason": "SUBMITTED_TO_WINDOWS", "receipt": {"backend": "windows-toasts", "display_confirmed": false, "notification_setting": "ENABLED"}, "rule_id": "78fb2ab4b993ac4fc2e9", "status": "NOTIFY_ONLY"}]
+[2026-11-18 16:41:41 KST] [{"reason": "COOLDOWN_ACTIVE", "rule_id": "78fb2ab4b993ac4fc2e9", "status": "WAIT"}]
+[2026-11-18 16:41:41 KST] Monitoring stopped. Registered rules remain on disk.
+

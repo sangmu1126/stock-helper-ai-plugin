@@ -11,16 +11,19 @@
 | 형태 | Codex 플러그인(스킬 3개 + 로컬 런타임), Python 3.11+ |
 | 핵심 구조 | 판정은 결정적 코드가 맡고, 문장 이해·설명·코드 수정은 Codex가 맡음 |
 | 근거 | 금감원 전산장애 통계, 담보비율 오안내 보도, 회사 공식 안내·공지, 거래소 발표 ([근거 문서](src/docs/MARKET_HOURS_EVIDENCE.md), [신용 가드 근거](src/docs/MARGIN_GUARD.md)) |
-| 검증 | 테스트 300개와 ruff 린트를 GitHub Actions CI에서 실행(생성된 JUnit 테스트를 실제 JDK로 실행하는 것 포함). 합성 저장소·가상 자료로 수정 전후 재현, 공개 증권 저장소 5곳으로 오탐 평가 |
+| 검증 | 자동 테스트와 ruff 린트를 GitHub Actions CI에서 실행(생성된 JUnit 테스트를 실제 JDK로 실행하는 것 포함). 합성 저장소·가상 자료로 수정 전후 재현, 공개 증권 저장소 5곳으로 오탐 평가 |
 | 외부 연결 | 없음. 실시간 시세(yfinance)만 선택 사항 |
 
 ### 실행 기록과 외부 기여
 
 - **공개 PR:** 한국투자증권 공식 예제의 폐지된 시간외 단일가 안내 9곳을 수정하는 [PR #91](https://github.com/koreainvestment/open-trading-api/pull/91)을 제출했습니다. 설명 문구만 변경했으며 해당 TR의 현행 제공 시간은 확정하지 않았습니다. PR 제출은 반영·승인을 의미하지 않습니다.
 - **실제 CLI 기록:** [실행 요약](docs/media/demo-evidence/summary.json), [변경 전 경계 테스트](docs/media/demo-evidence/mhg-before-tests.txt), [수정 예제 경계 테스트](docs/media/demo-evidence/mhg-after-tests.txt), [상담 문구 점검](docs/media/demo-evidence/mrc-lint.txt), [반대매매 가드](docs/media/demo-evidence/margin-guard.txt), [달러 조건 룰](docs/media/demo-evidence/usd-rule.txt).
-- **화면 촬영:** [캡처 안내와 현재 상태](docs/media/CAPTURE.md). 위 기록은 기존 합성 원본·수정 예제의 실제 CLI 실행 결과이며, Codex 앱 화면 캡처나 실시간 수정 녹화가 아닙니다.
+- **가격 알림 실사용 흐름 (0.7.0):** 빈 작업 폴더에서 [초안](docs/media/alert-flow/01-draft.txt) → [조건 확인](docs/media/alert-flow/02-confirm.txt) → [등록](docs/media/alert-flow/03-register.txt) → [감시](docs/media/alert-flow/04-watch.txt) → [알림](docs/media/alert-flow/05-notify.txt) → [Ctrl+C 중지](docs/media/alert-flow/06-stop.txt)까지 이어서 실행했습니다([요약](docs/media/alert-flow/summary.json)). 실제로 표시된 [Windows 알림 화면](docs/media/alert-flow/notification.png)도 남겼습니다.
+  - **1~6단계는 합성 시세(`demo-fixture`)입니다.** 조건이 맞도록 만든 가짜 가격이며, 알림 제목에 `[DEMO]`가 붙습니다.
+  - **[7단계](docs/media/alert-flow/07-real-quote.txt)는 실제 시세(Yahoo Finance)입니다.** 같은 룰을 실제 시세로 한 번 평가했습니다. 카카오는 Yahoo에 애프터마켓 시세가 없어 마지막 시세가 1시간 넘게 지난 정규장 종가였고, `STALE_QUOTE`로 알리지 않았습니다. TSLA는 미국 정규장 밖이라 `WAIT`였습니다. **실제 시세로 알림이 발송된 기록은 아직 없습니다.**
+- **화면 촬영:** [캡처 안내와 현재 상태](docs/media/CAPTURE.md). 위 CLI 기록은 Codex 앱 화면 캡처나 실시간 수정 녹화가 아닙니다. 알림 화면만 실제 바탕화면을 잘라 저장했습니다.
 
-CLI 기록은 `python tools/record_demo_evidence.py`로 다시 생성할 수 있습니다. 작업·사용자 경로 접두어만 가렸고 AI 전체 대화 로그는 변경하지 않았습니다.
+CLI 기록은 `python tools/record_demo_evidence.py`로, 가격 알림 흐름은 `python tools/record_alert_flow.py --screenshot`(KRX 정규장 또는 애프터마켓 시간에 실행)으로 다시 생성할 수 있습니다. 작업·사용자 경로 접두어만 가렸고 AI 전체 대화 로그는 변경하지 않았습니다.
 
 ## 배경
 
@@ -177,7 +180,48 @@ python src/skills/safe-trade-rule-builder/scripts/rule_builder.py --intent "테�
 python src/skills/safe-trade-rule-builder/scripts/rule_builder.py --intent "카카오가 3% 떨어지면 알려줘" --backtest --provider demo-fixture --format markdown
 ```
 
-### 3-3. 로컬 런타임
+### 3-3. 로컬 가격 감시와 Windows 알림 (0.7.0)
+
+가격 알림은 초안 생성에서 끝나지 않습니다. 확인한 알림 전용 규칙을 SQLite에 등록하고, 로컬 감시 프로세스가 조건을 반복 평가해 Windows 작업 표시줄 알림으로 제출합니다. 실주문은 하지 않습니다.
+
+1. 아래 명령으로 초안을 저장하고 종목·통화·가격·세션·쿨다운을 확인합니다. 예시는 TSLA 200 USD 이하, 미국 정규장, 10분 쿨다운입니다. `price_cross_below`는 기존 평가기의 포함 비교(`<=`)를 사용하며, 엄격한 미만 비교가 아닙니다.
+
+```powershell
+$scripts = (Resolve-Path src/skills/safe-trade-rule-builder/scripts).Path
+python "$scripts/rule_builder.py" --intent "테슬라가 200달러 아래로 내려가면 알려줘" --save-draft rule-output/tsla.json --format markdown
+```
+
+2. 값을 확인한 뒤 `--confirm`으로 등록합니다. 등록만으로 감시는 시작되지 않습니다.
+
+```powershell
+python "$scripts/alert_watch.py" add --draft rule-output/tsla.json --intent "테슬라가 200달러 아래로 내려가면 알려줘" --confirm
+python "$scripts/alert_watch.py" setup-notifications
+python "$scripts/alert_watch.py" test-notification
+python "$scripts/alert_watch.py" run --interval 60
+```
+
+`run` 터미널을 열어 둔 동안 60초 간격으로 확인합니다. `Ctrl+C`는 감시를 종료하고 등록·쿨다운 기록은 남깁니다. 재부팅·절전·프로세스 종료 후에는 자동 재시작하지 않습니다. `run --once`는 한 번만 평가하는 검사이며 지속 감시가 아닙니다.
+
+`setup-notifications`는 현재 사용자의 알림 앱 식별자와 표시명만 등록하며 알림 허용·방해 금지·보안 설정은 변경하지 않습니다. Windows 의존성은 `python -m pip install -r src/requirements.txt`로 설치합니다.
+
+3. 다른 터미널에서 같은 프로젝트 폴더로 이동하고 `$scripts`를 다시 설정하면 상태·기록을 확인하고 중지·재개·삭제할 수 있습니다. 기본 DB는 현재 작업 폴더의 `rule-output/alerts.sqlite3`이며 다른 경로는 모든 명령에 동일하게 `--db <경로>`를 서브명령 앞에 지정합니다.
+
+```powershell
+python "$scripts/alert_watch.py" status
+python "$scripts/alert_watch.py" list
+python "$scripts/alert_watch.py" events
+python "$scripts/alert_watch.py" pause <rule-id>
+python "$scripts/alert_watch.py" resume <rule-id>
+python "$scripts/alert_watch.py" remove <rule-id>
+```
+
+**범위와 한계:** 시세는 기존 yfinance 공급자(Yahoo Finance)를 사용하며 카카오페이증권 연동이 아닙니다. 15초보다 오래된 시세, 통화·종목 불일치, 휴장·장외 시각, 정책 위반에서는 발송하지 않습니다. Yahoo가 표시한 시세 지연은 KRX 20분, TSLA(나스닥) 15분입니다(2026-11-18 기록). 표시대로라면 이 공급자의 시세는 15초 기준을 넘어 알림이 발송되지 않습니다. 정규장 중 실제 시세 나이는 아직 재 보지 않았습니다. 폴링 사이의 가격 변동도 놓칠 수 있어 실시간·무누락 알림을 보장하지 않습니다. 가격 조건이 계속 맞으면 쿨다운마다 재알림할 수 있습니다. Windows 알림 설정·방해 금지에 따라 표시되지 않을 수 있으며 `submitted`는 OS 제출이지 수신·열람 확인이 아닙니다.
+
+만료·연속일 조건, 뉴스·거래량·수동 검토 취소 조건은 자동으로 처리할 수 없어 등록 시 거절합니다. 계좌 자동 갱신·담보비율 지속 감시, 휴대폰 푸시·이메일, 로그인 시 자동 시작은 제공하지 않습니다. 발송 실패는 기록하고 새 시세에서 최소 60초 후 재시도합니다. OS 제출 직후 프로세스가 종료되면 기록 시점 차이로 재시작 후 중복이 생길 수 있어 정확히 한 번 전달을 보장하지 않습니다. 일시정지·삭제 전 이미 진행 중인 알림은 제출될 수 있습니다.
+
+네이티브 알림은 Windows SDK 바인딩을 제공하는 [Windows-Toasts](https://windows-toasts.readthedocs.io/en/latest/)를 사용합니다. 초안·계좌·등록 DB·알림 이력은 `rule-output/` 아래 로컬 파일이므로 제출물이나 공개 저장소에 포함하지 마세요. 기존 0.6.0 설치본은 새 소스를 반영하도록 플러그인을 재설치하고 새 세션을 시작해야 합니다.
+
+### 3-4. 로컬 런타임
 
 `src/runtime/runtime_handler.py`의 `handle_event(event)`가 룰 이벤트(시세, 브로커 상태, 계좌 한도 포함)를 받아 결정을 냅니다. 결정은 `STOP`, `WAIT`, `NOTIFY_ONLY`, `MANUAL_CONFIRM`, `REQUIRE_CLARIFICATION`, `BLOCK` 중 하나입니다. 세션 시간, 휴장일, 특수일은 `src/runtime/market_sessions.json`에 있고, 스킬과 런타임이 함께 씁니다.
 
@@ -205,7 +249,7 @@ python -m pytest -q
 ruff check src tests tools
 ```
 
-- 테스트 300개가 파이썬 경로 설정 없이 통과합니다. CI(GitHub Actions)에서 린트와 함께 실행합니다.
+- 테스트는 파이썬 경로 설정 없이 실행합니다. CI(GitHub Actions)에서 린트와 함께 실행합니다.
 - 그중 4개는 생성된 JUnit 테스트를 실제로 컴파일·실행합니다. JDK와 JUnit 콘솔 런처(`JUNIT_CONSOLE_JAR`)가 없으면 로컬에서는 건너뛰고, CI에서는 실패로 처리합니다.
 - 플러그인 소스에 클라우드 SDK나 외부 AI API SDK가 없다는 것도 테스트로 확인합니다.
 
@@ -221,7 +265,7 @@ src/                                  # Codex 플러그인 루트
 ├── runtime/                          # 룰을 평가하는 로컬 런타임 (세션 설정 공용)
 ├── docs/                             # 근거·설계 문서, 프로젝트 요약
 └── requirements.txt
-tests/                                # 테스트 300개
+tests/                                # 스킬·런타임·로컬 알림 테스트
 docs/reboot/                          # 주제 선정 과정, 결정 기록, 보관 자료
 tools/package_submission.py           # 해커톤 제출용 패키징 도구(기록용)
 ```

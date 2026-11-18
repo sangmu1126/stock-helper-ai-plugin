@@ -1,0 +1,154 @@
+{
+  "recorded_at": "2026-11-18T16:41:54+09:00",
+  "plugin_version": "0.7.0",
+  "source_commit": "545862f9da63bfa2eb9f5e59a9abdae02b82fb33",
+  "uncommitted_source_files": [],
+  "python": "3.12.1",
+  "os": "Windows 11",
+  "workspace": "fresh temporary folder with an empty alert database (same state as a new session)",
+  "demo_session": "after_hours",
+  "data_sources": {
+    "01-06": "demo-fixture: built-in synthetic prices, not market data; notification titles start with [DEMO]",
+    "07": "Yahoo Finance via yfinance: real quotes as delivered by the provider"
+  },
+  "notification": "real Windows notifications were submitted; 'submitted' is not proof that a person saw it",
+  "screenshot": "notification.png",
+  "orders": "none; the watcher is notify-only",
+  "steps": [
+    {
+      "step": "01-draft",
+      "check": "rule_builder: 초안 저장과 리포트",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "02-confirm",
+      "check": "확인 없이 등록 시도는 거부",
+      "exit_code": 2,
+      "expectation_met": true
+    },
+    {
+      "step": "03-register",
+      "check": "확인 후 등록(감시는 아직 시작 안 함)",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "03-register",
+      "check": "상태: 감시 프로세스 없음, 활성 룰 1개",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "03-register",
+      "check": "등록 목록",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "04-watch",
+      "check": "1회차: 조건 충족 -> Windows 알림 제출",
+      "expectation_met": true
+    },
+    {
+      "step": "04-watch",
+      "check": "감시 중 상태",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "04-watch",
+      "check": "두 번째 감시 프로세스는 거부(같은 DB)",
+      "exit_code": 2,
+      "expectation_met": true
+    },
+    {
+      "step": "04-watch",
+      "check": "2회차(60초 뒤): 쿨다운으로 재알림 안 함",
+      "expectation_met": true
+    },
+    {
+      "step": "05-notify",
+      "check": "알림 이력(제출 기록, 실주문 없음)",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "06-stop",
+      "check": "Ctrl+C로 감시 종료",
+      "expectation_met": true
+    },
+    {
+      "step": "06-stop",
+      "check": "종료 후 상태",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "06-stop",
+      "check": "등록 룰은 남음",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "06-stop",
+      "check": "룰 삭제",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "06-stop",
+      "check": "삭제 후 목록",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "06-stop",
+      "check": "알림 이력은 보존",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "07-real-quote",
+      "check": "Yahoo 시세 메타데이터(지연 분, 시세 나이)",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "07-real-quote",
+      "check": "같은 룰을 실제 시세로 등록",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "07-real-quote",
+      "check": "1회 평가(run --once)",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "07-real-quote",
+      "check": "TSLA 200달러 이하 초안(오프라인 파서)",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "07-real-quote",
+      "check": "TSLA 실제 시세로 등록",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "07-real-quote",
+      "check": "1회 평가(두 룰)",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "07-real-quote",
+      "check": "알림 이력",
+      "exit_code": 0,
+      "expectation_met": true
+    }
+  ]
+}
