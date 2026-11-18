@@ -1,0 +1,100 @@
+{
+  "recorded_at": "2026-11-18T23:48:09+09:00",
+  "plugin_version": "0.7.0",
+  "source_commit": "f0847e3d36aab3beee68f7bbee7d37731cdc0d7a",
+  "uncommitted_source_files": [
+    "tools/record_us_real_alert.py"
+  ],
+  "python": "3.12.1",
+  "yfinance": "1.5.1",
+  "os": "Windows 11",
+  "data_source": "Yahoo Finance via yfinance: live quotes, not demo-fixture",
+  "freshness_limit_seconds": 15,
+  "yahoo_metadata": {
+    "TSLA": {
+      "quoteSourceName": "Nasdaq Real Time Price",
+      "exchangeDataDelayedBy": 15,
+      "fullExchangeName": "NasdaqGS"
+    },
+    "AAPL": {
+      "quoteSourceName": "Nasdaq Real Time Price",
+      "exchangeDataDelayedBy": 15,
+      "fullExchangeName": "NasdaqGS"
+    },
+    "NVDA": {
+      "quoteSourceName": "Nasdaq Real Time Price",
+      "exchangeDataDelayedBy": 15,
+      "fullExchangeName": "NasdaqGS"
+    }
+  },
+  "quote_age_seconds": {
+    "TSLA": {
+      "min": 0,
+      "max": 2,
+      "count": 10,
+      "within_limit": 10,
+      "health_errors": 0
+    },
+    "AAPL": {
+      "min": 0,
+      "max": 2,
+      "count": 10,
+      "within_limit": 10,
+      "health_errors": 0
+    },
+    "NVDA": {
+      "min": 0,
+      "max": 2,
+      "count": 10,
+      "within_limit": 10,
+      "health_errors": 0
+    }
+  },
+  "alert_cycle": [
+    {
+      "notification_id": 1,
+      "reason": "SUBMITTED_TO_WINDOWS",
+      "receipt": {
+        "backend": "windows-toasts",
+        "display_confirmed": false,
+        "notification_setting": "ENABLED"
+      },
+      "rule_id": "a0b4b1638c00c4b77c40",
+      "status": "NOTIFY_ONLY"
+    }
+  ],
+  "notification": "submitted to Windows; 'submitted' is not proof that a person saw it",
+  "screenshot": "notification.png",
+  "orders": "none; the watcher is notify-only",
+  "steps": [
+    {
+      "step": "quotes",
+      "check": "모든 시세가 15초 이하",
+      "expectation_met": true
+    },
+    {
+      "step": "alert",
+      "check": "rule_builder: 초안 저장과 리포트",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "alert",
+      "check": "실제 시세(yfinance)로 등록",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "alert",
+      "check": "1회 평가(run --once)",
+      "exit_code": 0,
+      "expectation_met": true
+    },
+    {
+      "step": "alert",
+      "check": "알림 이력(제출 기록, 실주문 없음)",
+      "exit_code": 0,
+      "expectation_met": true
+    }
+  ]
+}

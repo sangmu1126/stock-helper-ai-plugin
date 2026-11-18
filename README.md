@@ -20,10 +20,11 @@
 - **실제 CLI 기록:** [실행 요약](docs/media/demo-evidence/summary.json), [변경 전 경계 테스트](docs/media/demo-evidence/mhg-before-tests.txt), [수정 예제 경계 테스트](docs/media/demo-evidence/mhg-after-tests.txt), [상담 문구 점검](docs/media/demo-evidence/mrc-lint.txt), [반대매매 가드](docs/media/demo-evidence/margin-guard.txt), [달러 조건 룰](docs/media/demo-evidence/usd-rule.txt).
 - **가격 알림 실사용 흐름 (0.7.0):** 빈 작업 폴더에서 [초안](docs/media/alert-flow/01-draft.txt) → [조건 확인](docs/media/alert-flow/02-confirm.txt) → [등록](docs/media/alert-flow/03-register.txt) → [감시](docs/media/alert-flow/04-watch.txt) → [알림](docs/media/alert-flow/05-notify.txt) → [Ctrl+C 중지](docs/media/alert-flow/06-stop.txt)까지 이어서 실행했습니다([요약](docs/media/alert-flow/summary.json)). 실제로 표시된 [Windows 알림 화면](docs/media/alert-flow/notification.png)도 남겼습니다.
   - **1~6단계는 합성 시세(`demo-fixture`)입니다.** 조건이 맞도록 만든 가짜 가격이며, 알림 제목에 `[DEMO]`가 붙습니다.
-  - **[7단계](docs/media/alert-flow/07-real-quote.txt)는 실제 시세(Yahoo Finance)입니다.** 같은 룰을 실제 시세로 한 번 평가했습니다. 카카오는 Yahoo에 애프터마켓 시세가 없어 마지막 시세가 1시간 넘게 지난 정규장 종가였고, `STALE_QUOTE`로 알리지 않았습니다. TSLA는 미국 정규장 밖이라 `WAIT`였습니다. **실제 시세로 알림이 발송된 기록은 아직 없습니다.**
+  - **[7단계](docs/media/alert-flow/07-real-quote.txt)는 실제 시세(Yahoo Finance)입니다.** 같은 룰을 실제 시세로 한 번 평가했습니다. 카카오는 Yahoo에 애프터마켓 시세가 없어 마지막 시세가 1시간 넘게 지난 정규장 종가였고, `STALE_QUOTE`로 알리지 않았습니다. TSLA는 미국 정규장 밖이라 `WAIT`였습니다.
+  - **[미국 정규장 실제 시세 알림](docs/media/us-real-alert/alert.txt)은 발송됐습니다.** 2026-11-18 미국 정규장(09:43~09:48 EST)에 TSLA·AAPL·NVDA 시세를 30초 간격으로 10번씩 받았더니 시세 나이가 모두 0~2초였습니다([표본](docs/media/us-real-alert/quotes.txt)). 이어서 반드시 맞는 조건(TSLA 10,000달러 이하)으로 등록한 실제 시세 알림이 `[DEMO]` 없이 Windows에 제출됐습니다([알림 화면](docs/media/us-real-alert/notification.png), [요약](docs/media/us-real-alert/summary.json)).
 - **화면 촬영:** [캡처 안내와 현재 상태](docs/media/CAPTURE.md). 위 CLI 기록은 Codex 앱 화면 캡처나 실시간 수정 녹화가 아닙니다. 알림 화면만 실제 바탕화면을 잘라 저장했습니다.
 
-CLI 기록은 `python tools/record_demo_evidence.py`로, 가격 알림 흐름은 `python tools/record_alert_flow.py --screenshot`(KRX 정규장 또는 애프터마켓 시간에 실행)으로 다시 생성할 수 있습니다. 작업·사용자 경로 접두어만 가렸고 AI 전체 대화 로그는 변경하지 않았습니다.
+CLI 기록은 `python tools/record_demo_evidence.py`로, 가격 알림 흐름은 `python tools/record_alert_flow.py --screenshot`(KRX 정규장 또는 애프터마켓 시간에 실행)으로, 미국 실제 시세 기록은 `python tools/record_us_real_alert.py --screenshot`(미국 정규장, 한국시간 겨울 23:30~06:00·여름 22:30~05:00)으로 다시 생성할 수 있습니다. 작업·사용자 경로 접두어만 가렸고 AI 전체 대화 로그는 변경하지 않았습니다.
 
 ## 배경
 
@@ -184,11 +185,11 @@ python src/skills/safe-trade-rule-builder/scripts/rule_builder.py --intent "카�
 
 가격 알림은 초안 생성에서 끝나지 않습니다. 확인한 알림 전용 규칙을 SQLite에 등록하고, 로컬 감시 프로세스가 조건을 반복 평가해 Windows 작업 표시줄 알림으로 제출합니다. 실주문은 하지 않습니다.
 
-> **알려진 한계: 실제 시세로는 알림이 사실상 발송되지 않습니다.**
-> - Yahoo가 밝힌 시세 지연은 KRX 20분, TSLA(나스닥) 15분입니다(2026-11-18 기록).
-> - 감시는 15초보다 오래된 시세로는 알리지 않습니다. 그래서 `yfinance` 공급자로 등록하면 가격 조건이 맞아도 `STALE_QUOTE`로 멈춥니다.
-> - 지연된 가격으로 "떨어졌다"고 알리면 이미 움직인 시장을 보고 판단하게 되므로, 15초 기준은 완화하지 않고 한계로 둡니다.
-> - 알림이 실제로 표시되는 흐름은 합성 시세(`demo-fixture`, 제목에 `[DEMO]`)로만 시연했습니다. 실제 알림에는 실시간 시세 공급자 연결이 필요합니다.
+> **알려진 한계: 국내(KRX) 종목은 실제 시세로 알림이 사실상 발송되지 않습니다.**
+> - 감시는 15초보다 오래된 시세로는 알리지 않습니다. Yahoo의 KRX 시세는 20분 지연("Delayed Quote")이고 애프터마켓 시세는 없습니다. 그래서 국내 종목을 `yfinance` 공급자로 등록하면 가격 조건이 맞아도 `STALE_QUOTE`로 멈춥니다.
+> - 미국 종목은 정규장 중에 알림이 나갑니다. 2026-11-18 미국 정규장에 잰 시세 나이는 0~2초였고, 실제 시세 TSLA 알림이 Windows에 제출됐습니다([기록](docs/media/us-real-alert/alert.txt)). Yahoo는 이 시세에도 "15분 지연" 값을 붙이지만, 출처는 "Nasdaq Real Time Price"로 표시되고 실측도 실시간이었습니다. 5분간 측정한 값이므로 Yahoo의 제공 방식이 바뀌면 달라질 수 있습니다.
+> - 미국 정규장 밖(장 전·장 후)에는 시세 시각이 마지막 정규장 종가에 머물러 알리지 않습니다.
+> - 지연된 가격으로 "떨어졌다"고 알리면 이미 움직인 시장을 보고 판단하게 되므로 15초 기준은 완화하지 않았습니다. 국내 종목을 실제 시세로 알리려면 실시간 시세 공급자 연결이 필요합니다.
 
 1. 아래 명령으로 초안을 저장하고 종목·통화·가격·세션·쿨다운을 확인합니다. 예시는 TSLA 200 USD 이하, 미국 정규장, 10분 쿨다운입니다. `price_cross_below`는 기존 평가기의 포함 비교(`<=`)를 사용하며, 엄격한 미만 비교가 아닙니다.
 
@@ -221,7 +222,7 @@ python "$scripts/alert_watch.py" resume <rule-id>
 python "$scripts/alert_watch.py" remove <rule-id>
 ```
 
-**범위와 한계:** 시세는 기존 yfinance 공급자(Yahoo Finance)를 사용하며 카카오페이증권 연동이 아닙니다. 15초보다 오래된 시세, 통화·종목 불일치, 휴장·장외 시각, 정책 위반에서는 발송하지 않습니다. 실제 시세 지연 때문에 알림이 발송되지 않는 한계는 이 절 맨 위에 적었습니다(정규장 중 실제 시세 나이는 아직 재 보지 않았습니다). 폴링 사이의 가격 변동도 놓칠 수 있어 실시간·무누락 알림을 보장하지 않습니다. 가격 조건이 계속 맞으면 쿨다운마다 재알림할 수 있습니다. Windows 알림 설정·방해 금지에 따라 표시되지 않을 수 있으며 `submitted`는 OS 제출이지 수신·열람 확인이 아닙니다.
+**범위와 한계:** 시세는 기존 yfinance 공급자(Yahoo Finance)를 사용하며 카카오페이증권 연동이 아닙니다. 15초보다 오래된 시세, 통화·종목 불일치, 휴장·장외 시각, 정책 위반에서는 발송하지 않습니다. 국내 종목의 실제 시세 지연 한계와 미국 정규장 실측 결과는 이 절 맨 위에 적었습니다. 폴링 사이의 가격 변동도 놓칠 수 있어 실시간·무누락 알림을 보장하지 않습니다. 가격 조건이 계속 맞으면 쿨다운마다 재알림할 수 있습니다. Windows 알림 설정·방해 금지에 따라 표시되지 않을 수 있으며 `submitted`는 OS 제출이지 수신·열람 확인이 아닙니다.
 
 만료·연속일 조건, 뉴스·거래량·수동 검토 취소 조건은 자동으로 처리할 수 없어 등록 시 거절합니다. 계좌 자동 갱신·담보비율 지속 감시, 휴대폰 푸시·이메일, 로그인 시 자동 시작은 제공하지 않습니다. 발송 실패는 기록하고 새 시세에서 최소 60초 후 재시도합니다. OS 제출 직후 프로세스가 종료되면 기록 시점 차이로 재시작 후 중복이 생길 수 있어 정확히 한 번 전달을 보장하지 않습니다. 일시정지·삭제 전 이미 진행 중인 알림은 제출될 수 있습니다.
 
@@ -283,7 +284,8 @@ tools/package_submission.py           # 해커톤 제출용 패키징 도구(기
 - 담보비율 계산식은 공식 안내에 없어 업계 일반식을 쓰며, 출력에 "앱 표시값 우선"을 표시합니다.
 - 휴장일 달력은 거래소가 공지한 2027년 말까지만 들어 있습니다. 그 뒤 날짜는 세션 판정에서 `WAIT`로 두고 반대매매 날짜 계산에는 경고를 붙이므로, 매년 공지를 받아 갱신해야 합니다. 특수일은 공지가 확인된 날만 넣습니다.
 - 카카오페이증권 공개 주문·계좌 API가 없어 시세는 yfinance(선택)나 데모 시세를 쓰고, 계좌 정보는 사용자가 입력합니다.
-- 조건을 계속 지켜보다 알리는 상시 감시는 범위 밖입니다. 요청한 시점의 값으로 판단합니다.
+- 가격 알림은 PC에서 감시 프로세스를 켜 둔 동안만 동작합니다. 자동 시작, 휴대폰 푸시, 계좌 담보비율 상시 감시는 없습니다.
+- 국내(KRX) 종목은 Yahoo 시세가 20분 지연이라 실제 시세로는 알림이 사실상 나가지 않습니다. 미국 종목은 정규장 중에만 알립니다([3-3](#3-3-로컬-가격-감시와-windows-알림-070) 참고).
 
 ## 안전 고지
 

@@ -240,6 +240,9 @@ Codex 세션이 만든 로컬 가격 알림(0.7.0)을 검토하고, 실사용 �
 ## 결과
 
 - 실사용 흐름 23개 확인 항목 통과, 실제 표시된 Windows 알림 캡처(`docs/media/alert-flow/`)
-- 실제 시세 7단계: 카카오는 Yahoo에 애프터마켓 시세가 없어 `STALE_QUOTE`, TSLA는 장외 `WAIT`. 실제 시세로 발송된 알림 없음
-- 테스트 351개 통과(CI, JUnit 4개 포함), ruff 통과
-- 검토에서 찾은 `alert_watch.py` 결함 3건은 J10에서 고침(테스트 3개 추가)
+- 실제 시세 7단계(국내 애프터마켓 시간): 카카오는 Yahoo에 애프터마켓 시세가 없어 `STALE_QUOTE`, TSLA는 장외 `WAIT`. 발송된 알림 없음
+- J11 실측(2026-11-18 23:43~23:48 KST, 미국 정규장 09:43~09:48 EST): TSLA·AAPL·NVDA 각 10회 모두 시세 나이 0~2초, 헬스 오류 0건. Yahoo 메타데이터의 "15분 지연"(`exchangeDataDelayedBy` 15)과 달리 출처 표시("Nasdaq Real Time Price")대로 실시간이었음. 반드시 맞는 조건(TSLA 10,000달러 이하)의 실제 시세 알림이 `[DEMO]` 없이 Windows에 제출됨(`docs/media/us-real-alert/`, `tools/record_us_real_alert.py`). 앞서 23:35~23:40에 임시 스크립트로 잰 값도 같았음(0~2초)
+- J11에 따라 한계를 "국내(KRX) 종목만"으로 좁힘. J8의 15초 기준은 그대로. 미국 정규장 밖은 시세 시각이 정규장 종가에 머물러 알리지 않음
+- 미국 기록은 `alert-flow/`가 아닌 별도 폴더에 둠. `record_alert_flow.py`가 실행 때마다 자기 폴더의 `.txt`를 지우기 때문
+- 테스트 354개 통과(CI, JUnit 4개 포함), ruff 통과
+- 검토에서 찾은 `alert_watch.py` 결함 3건은 J10에서 고침(테스트 3개 추가, 351 → 354)

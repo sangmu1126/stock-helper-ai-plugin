@@ -14,7 +14,8 @@ Computer Use의 node_repl 초기화와 커널 초기화 후 재시도에서 모�
 
 `alert-flow/`에는 빈 작업 폴더에서 초안 → 조건 확인 → 등록 → 감시 → Windows 알림 → Ctrl+C 중지까지 이어서 실행한 기록이 있습니다(`python tools/record_alert_flow.py --screenshot`).
 
-- 1~6단계는 합성 시세(`demo-fixture`)라 알림 제목에 `[DEMO]`가 붙습니다. 7단계만 실제 시세(Yahoo Finance)이며, 실제 시세로 알림이 발송된 기록은 아직 없습니다.
+- 1~6단계는 합성 시세(`demo-fixture`)라 알림 제목에 `[DEMO]`가 붙습니다. 7단계만 실제 시세(Yahoo Finance)이며, 국내 시간대에 실행해 알림은 나가지 않았습니다.
+- 미국 정규장 실제 시세 기록은 `us-real-alert/`에 따로 있습니다(`python tools/record_us_real_alert.py --screenshot`). 시세 나이 표본과 실제 시세 TSLA 알림(제목에 `[DEMO]` 없음)의 화면입니다. 알림 조건은 경로 확인용으로 반드시 맞게 정했습니다.
 - `alert-flow/notification.png`는 실제로 표시된 Windows 알림을 촬영한 것입니다. 알림과 작업 표시줄 시계만 남기고 잘랐습니다.
 - 이것도 CLI 실행이며, Codex 앱에서 대화로 진행한 화면은 아닙니다. 앱 화면은 아래 4번으로 촬영합니다.
 
