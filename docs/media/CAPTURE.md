@@ -2,7 +2,7 @@
 
 ## 현재 상태
 
-2026-11-19 기준 소스·CLI 설치 버전은 `0.7.1`입니다. `demo-evidence/`는 0.6.0, `alert-flow/`와 `us-real-alert/`는 0.7.0의 당시 실행 기록이며, 각 `summary.json`의 버전·커밋을 기준으로 읽습니다. 설치된 0.7.1의 공개 예제 실행은 CLI로 확인했지만 Codex 앱의 대화 화면을 촬영한 증거와는 구분합니다.
+2026-11-19 기준 소스 버전은 `0.7.2`(거래시간 점검기 CSV 검사 추가)이고, 공개 예제를 CLI로 실행한 설치 버전은 `0.7.1`입니다. `demo-evidence/`는 0.6.0, `alert-flow/`와 `us-real-alert/`는 0.7.0의 당시 실행 기록이며, 각 `summary.json`의 버전·커밋을 기준으로 읽습니다. 설치된 0.7.1의 공개 예제 실행은 CLI로 확인했지만 Codex 앱의 대화 화면을 촬영한 증거와는 구분합니다.
 
 초기 0.6.0 기록 작업에서는 Computer Use 초기화가 `failed to write kernel assets`로 실패해 PNG·GIF를 촬영하지 못했습니다. 2026-11-19 재시도도 `trusted Node process exited unexpectedly`로 종료됐습니다. 아래 0.7.0의 실제 Windows 알림 PNG는 별도 기록 도구로 확보한 자료이며, "모든 스크린샷이 없다"는 뜻은 아닙니다. 꾸며 만든 대화 화면은 사용하지 않습니다.
 

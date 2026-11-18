@@ -113,3 +113,57 @@ def test_files_over_size_limit_are_listed_in_report(tmp_path, calendar):
     assert result.stats.large_files == ["spec.json"]
     assert result.to_json()["coverage"]["skipped_large_files"] == ["spec.json"]
     assert "검사하지 않은 파일 1개" in render_markdown(result) and "`spec.json`" in render_markdown(result)
+
+
+def test_csv_spec_text_is_checked(tmp_path, calendar):
+    """실제 저장소 평가에서 놓친 것 4: 한국투자 API 명세 data.csv에 남은 폐지된 시간외 단일가 안내."""
+    (tmp_path / "data.csv").write_text(
+        "category,api_name,description\n"
+        'domestic_stock,overtime_asking_price_krx,"국내주식 시간외 실시간호가 (KRX) API입니다. '
+        '국내주식 시간외 단일가(16:00~18:00) 시간대에 실시간호가 데이터 확인 가능합니다."\n',
+        encoding="utf-8")
+    result = scan_repo(tmp_path, calendar)
+    assert [(f.path, f.line, f.found) for f in result.findings if f.status == "STALE"] == [("data.csv", 2, "18:00")]
+    assert result.stats.csv_data_values == 0
+
+
+def test_csv_session_table_uses_column_names_as_context(tmp_path, calendar):
+    (tmp_path / "sessions.csv").write_text(
+        "market,session,open,close\nKRX,regular,09:00,15:30\nKRX,single_price_overtime,16:00,18:00\n",
+        encoding="utf-8")
+    (tmp_path / "windows.csv").write_text(
+        "name,session_open,session_close\n" + "".join(f"{c},09:00,15:30\n" for c in "abcd"), encoding="utf-8")
+    found = statuses(scan_repo(tmp_path, calendar))
+    assert found[("sessions.csv", 3, "18:00")] == "STALE"
+    assert found[("sessions.csv", 2, "09:00")] == "MATCH"
+    # 5행은 열 이름에서 두 줄 넘게 떨어져 있어도 열 이름(session)이 문맥이 된다
+    assert ("windows.csv", 5, "15:30") in found
+
+
+def test_csv_market_data_values_are_skipped_and_reported(tmp_path, calendar):
+    """시세·체결 기록의 시각은 규칙이 아니다. 행마다 판정을 내지 않고, 건너뛴 수를 보고서에 남긴다."""
+    from market_hours_guard.report import render_markdown
+
+    bars = ["date,time,open,high,low,close,volume"]
+    bars += [f"2026-11-18,{9 + i // 60:02d}:{i % 60:02d},71000,71500,70900,71200,1000" for i in range(120)]
+    (tmp_path / "krx").mkdir()
+    (tmp_path / "krx" / "kospi_1min.csv").write_text("\n".join(bars) + "\n", encoding="utf-8")
+    ticks = ["symbol,date,time,price"]
+    ticks += [f"AAPL,2026-11-18,{9 + (30 + i) // 60:02d}:{(30 + i) % 60:02d},230.5" for i in range(60)]
+    (tmp_path / "us_market_ticks.csv").write_text("\n".join(ticks) + "\n", encoding="utf-8")
+
+    result = scan_repo(tmp_path, calendar)
+    assert result.findings == []
+    assert result.stats.csv_data_values == 180
+    assert sorted(result.stats.csv_data_files) == ["krx/kospi_1min.csv", "us_market_ticks.csv"]
+    assert result.to_json()["coverage"]["skipped_csv_data_values"] == 180
+    assert "CSV 기록 데이터로 보고 건너뛴 시각 180개" in render_markdown(result)
+
+
+def test_long_line_snippet_shows_the_found_value(tmp_path, calendar):
+    """CSV 한 행처럼 긴 줄은 첫 200자가 아니라 발견 위치 주변을 보여 준다."""
+    line = "x," + "가" * 300 + " 장중 거래량이 많아 장 종료 이후(15:30 이후) 조회하시고 " + "나" * 300
+    (tmp_path / "spec.csv").write_text("id,description\n" + line + "\n", encoding="utf-8")
+    [finding] = scan_repo(tmp_path, calendar).findings
+    assert "15:30" in finding.snippet
+    assert finding.snippet.startswith("…") and finding.snippet.endswith("…")

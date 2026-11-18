@@ -73,6 +73,10 @@ def _cmd_scan(args) -> int:
     if result.stats.large_files:
         print(f"[mhg] 주의: 1MB를 넘어 검사하지 않은 파일 {len(result.stats.large_files)}개 — "
               + ", ".join(result.stats.large_files[:3]) + (" 외" if len(result.stats.large_files) > 3 else ""))
+    if result.stats.csv_data_values:
+        files = result.stats.csv_data_files
+        print(f"[mhg] 참고: CSV 기록 데이터로 보고 건너뛴 시각 {result.stats.csv_data_values}개 — "
+              + ", ".join(files[:3]) + (" 외" if len(files) > 3 else ""))
     for f in result.findings:
         if f.status in ("MATCH", "IGNORED") and not args.verbose:
             continue

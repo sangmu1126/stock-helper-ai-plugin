@@ -48,6 +48,8 @@ class ScanResult:
                 "skipped_large": self.stats.skipped_large,
                 "skipped_large_files": self.stats.large_files,
                 "skipped_generated": self.stats.skipped_generated,
+                "skipped_csv_data_values": self.stats.csv_data_values,
+                "csv_data_files": self.stats.csv_data_files,
                 "time_expressions": self.occurrences,
                 "market_related": len(self.findings),
                 "non_market_ignored": self.non_market,

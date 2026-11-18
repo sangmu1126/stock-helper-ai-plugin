@@ -22,6 +22,14 @@ CODE_SUFFIXES = {
 }
 CONFIG_SUFFIXES = {".yaml", ".yml", ".json", ".properties", ".toml", ".ini", ".cfg", ".conf", ".xml", ".env"}
 DOC_SUFFIXES = {".md", ".txt", ".html", ".rst"}
+# CSV는 API 명세·설정 표(설명 문장, 라벨 붙은 행)일 수도, 시세·체결 기록(시각이 값인 행 수천 개)일 수도 있다.
+# 실제 저장소 평가에서 한국투자 API 명세 data.csv의 폐지 안내 3곳을 놓쳐서 검사 대상에 넣었다.
+# 기록 데이터의 시각은 규칙이 아니므로 건너뛰되, 건너뛴 수와 파일 이름을 보고서에 남긴다.
+DATA_SUFFIXES = {".csv"}
+CSV_SERIES_ROWS = 50  # 칸 전체가 시각인 행이 이보다 많으면 시계열 열(기록 데이터)로 본다
+CELL_EDGES = ",;\t\"'"
+LETTER_RE = re.compile(r"[A-Za-z가-힣]")
+SNIPPET_CHARS = 200
 SKIP_DIRS = {
     ".git", ".hg", ".svn", "node_modules", ".venv", "venv", "__pycache__", "dist", "build",
     "target", ".gradle", ".idea", ".mypy_cache", ".pytest_cache", ".ruff_cache", "mhg-output",
@@ -91,6 +99,8 @@ class FileStats:
     skipped_large: int = 0
     skipped_generated: int = 0
     large_files: list[str] = field(default_factory=list)  # 크기 제한으로 읽지 않은 파일 (보고서에 표시)
+    csv_data_values: int = 0  # CSV에서 기록 데이터 값으로 보고 건너뛴 시각 수 (보고서에 표시)
+    csv_data_files: list[str] = field(default_factory=list)
 
 
 def _valid(h: int, m: int, s: int = 0) -> bool:
@@ -203,11 +213,50 @@ def _headers(lines: list[str], idx: int, limit: int = 3, lookback: int = 80) -> 
     return names
 
 
-def extract_file(path: Path, rel: str) -> list[Occurrence]:
+def _snippet(line: str, col: int) -> str:
+    """긴 줄(CSV 한 행, 한 줄짜리 JSON)은 첫 200자가 아니라 발견 위치 주변을 보여 준다."""
+    text = line.strip()
+    if len(text) <= SNIPPET_CHARS:
+        return text
+    center = col - 1 - (len(line) - len(line.lstrip()))
+    start = max(0, min(center - SNIPPET_CHARS // 2, len(text) - SNIPPET_CHARS))
+    end = start + SNIPPET_CHARS
+    return ("…" if start else "") + text[start:end] + ("…" if end < len(text) else "")
+
+
+def _whole_cell(line: str, col: int, raw: str) -> bool:
+    before = line[:col - 1].rstrip(" ")
+    after = line[col - 1 + len(raw):].lstrip(" ")
+    return (not before or before[-1] in CELL_EDGES) and (not after or after[0] in CELL_EDGES)
+
+
+def csv_data_values(lines: list[str], per_line: dict[int, list]) -> set[tuple[int, int]]:
+    """CSV에서 규칙이 아니라 기록 데이터로 볼 시각의 (줄 번호, 줄 안 순번).
+
+    - 글자 없이 숫자·날짜·시각만 있는 행: `2026-11-18,09:01,71000,...` (분봉·체결 기록)
+    - 칸 전체가 시각인 행이 CSV_SERIES_ROWS개를 넘는 파일의 그런 칸: 종목명이 붙은 시세 기록의 시각 열
+    설명 문장 속 시각과 라벨이 붙은 작은 표(`KRX,regular,09:00,15:30`)는 그대로 검사한다.
+    """
+    wordless = {(i, n) for i, hits in per_line.items() if hits and not LETTER_RE.search(lines[i])
+                for n in range(len(hits))}
+    cells = {(i, n) for i, hits in per_line.items() for n, (col, _, raw, _) in enumerate(hits)
+             if _whole_cell(lines[i], col, raw)}
+    series = len({i for i, _ in cells}) > CSV_SERIES_ROWS
+    return wordless | (cells if series else set())
+
+
+def extract_file(path: Path, rel: str, stats: FileStats | None = None) -> list[Occurrence]:
     text = path.read_text(encoding="utf-8", errors="replace")
     lines = text.splitlines()
     path_words = " ".join(Path(rel).with_suffix("").parts)
     per_line = {i: find_times(line) for i, line in enumerate(lines)}
+    is_csv = path.suffix.lower() in DATA_SUFFIXES
+    data_values = csv_data_values(lines, per_line) if is_csv else set()
+    if data_values and stats is not None:
+        stats.csv_data_values += len(data_values)
+        stats.csv_data_files.append(rel)
+    # CSV는 열 이름(첫 행)이 각 행의 문맥이다: market,session,open,close
+    column_names = [lines[0]] if is_csv and lines else []
 
     occurrences: list[Occurrence] = []
     for i, hits in per_line.items():
@@ -218,13 +267,15 @@ def extract_file(path: Path, rel: str) -> list[Occurrence]:
         if not annotations and i > 0 and not per_line.get(i - 1):
             annotations = _annotation_items(lines[i - 1])
         previous = [lines[j] for j in range(max(0, i - 2), i)]
-        context_raw = " ".join([*previous, line, *_headers(lines, i), path_words])
+        context_raw = " ".join([*column_names, *previous, line, *_headers(lines, i), path_words])
         tokens = tokenize(context_raw)
         context = context_raw.lower()
         for n, (col, kind, raw, value) in enumerate(hits):
+            if (i, n) in data_values:
+                continue
             occurrences.append(Occurrence(
                 path=rel, line=i + 1, col=col, kind=kind, raw=raw, time=value,
-                snippet=line.strip()[:200], context=context, tokens=tokens,
+                snippet=_snippet(line, col), context=context, tokens=tokens,
                 annotations=annotations, index_on_line=n, count_on_line=len(hits),
             ))
     return occurrences
@@ -243,7 +294,7 @@ def compiled_output_dir(path: Path) -> bool:
 
 
 def iter_files(root: Path, include_docs: bool = False, exclude: tuple[Path, ...] = ()):
-    suffixes = CODE_SUFFIXES | CONFIG_SUFFIXES | (DOC_SUFFIXES if include_docs else set())
+    suffixes = CODE_SUFFIXES | CONFIG_SUFFIXES | DATA_SUFFIXES | (DOC_SUFFIXES if include_docs else set())
     excluded = tuple(p.resolve() for p in exclude)
     for dirpath, dirnames, filenames in os.walk(root):
         current = Path(dirpath)
@@ -272,5 +323,5 @@ def extract_repo(root: Path, include_docs: bool = False,
             stats.skipped_generated += 1
             continue
         stats.files_scanned += 1
-        occurrences.extend(extract_file(file, file.relative_to(root).as_posix()))
+        occurrences.extend(extract_file(file, file.relative_to(root).as_posix(), stats))
     return occurrences, stats

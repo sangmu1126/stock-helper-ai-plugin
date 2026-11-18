@@ -29,12 +29,21 @@ def _detail(n: int, f: Finding) -> list[str]:
     return lines
 
 
+def _shown(files: list[str]) -> str:
+    return ", ".join(f"`{p}`" for p in files[:5]) + (f" 외 {len(files) - 5}개" if len(files) > 5 else "")
+
+
 def _skipped_line(result: ScanResult) -> list[str]:
-    files = result.stats.large_files
-    if not files:
-        return []
-    shown = ", ".join(f"`{p}`" for p in files[:5]) + (f" 외 {len(files) - 5}개" if len(files) > 5 else "")
-    return [f"- **검사하지 않은 파일 {len(files)}개** (1MB 초과): {shown} — 직접 확인하거나 나눠서 검사하세요"]
+    stats = result.stats
+    out = []
+    if stats.large_files:
+        out.append(f"- **검사하지 않은 파일 {len(stats.large_files)}개** (1MB 초과): {_shown(stats.large_files)}"
+                   " — 직접 확인하거나 나눠서 검사하세요")
+    if stats.csv_data_values:
+        out.append(f"- **CSV 기록 데이터로 보고 건너뛴 시각 {stats.csv_data_values}개** "
+                   f"(파일 {len(stats.csv_data_files)}개: {_shown(stats.csv_data_files)}) — "
+                   "숫자·시각만 있는 행과 시계열 시각 열입니다. 거래시간 규칙 표라면 직접 확인하세요")
+    return out
 
 
 def render_markdown(result: ScanResult) -> str:
