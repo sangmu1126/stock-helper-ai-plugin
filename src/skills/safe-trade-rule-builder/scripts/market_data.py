@@ -57,7 +57,10 @@ class YFinanceMarketDataProvider:
                 },
             )
 
-        last_ts = info.get("regularMarketTime") or now
+        try:
+            last_ts = int(info.get("regularMarketTime") or 0)
+        except (TypeError, ValueError, OverflowError):
+            last_ts = 0
         price = float_or_none(getattr(fast_info, "last_price", None))
         previous_close = float_or_none(getattr(fast_info, "previous_close", None))
         open_price = float_or_none(getattr(fast_info, "open", None))
@@ -78,6 +81,9 @@ class YFinanceMarketDataProvider:
             health["errors"].append("MISSING_REGULAR_MARKET_PRICE")
         if previous_close is None:
             health["errors"].append("MISSING_PREVIOUS_CLOSE")
+        if last_ts <= 0 or last_ts > now:
+            health["ok"] = False
+            health["errors"].append("INVALID_QUOTE_TIMESTAMP")
 
         return MarketQuote(
             provider=self.name,

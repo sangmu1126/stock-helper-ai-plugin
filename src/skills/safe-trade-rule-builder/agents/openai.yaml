@@ -1,4 +1,4 @@
 interface:
   display_name: "Safe Trade Rule Builder"
-  short_description: "Turn trade or credit requests into safe, manually confirmed rules"
-  default_prompt: "Use $safe-trade-rule-builder to convert this trade idea into a safe rule draft."
+  short_description: "Validate rule drafts, register local price alerts, and check credit risks"
+  default_prompt: "Use $safe-trade-rule-builder to build and validate this rule. For price monitoring, show the settings for confirmation before registering or starting the local Windows notification worker."

@@ -1,6 +1,6 @@
 ---
 name: safe-trade-rule-builder
-description: Convert beginner investors' natural-language buy or sell intent into explainable, mechanical trading-rule drafts with risk guardrails, evaluated by a local runtime. Use when the user asks to turn phrases like "buy Kakao if it falls 3%" into rule JSON, runtime evaluation code, pre-trade health checks, circuit breakers, or a persuasion process that helps a novice understand whether to buy, sell, wait, or revise the rule without receiving direct investment advice. Also use for credit/margin trading (신용, 빚투, 담보비율, 반대매매): pre-trade forced-liquidation thresholds, collateral shortfall deadlines and required deposit, the 2026-11 temporary grace rule, and collateral-ratio alerts.
+description: Build and validate safe trading-rule drafts, and register persistent local price alerts with Windows desktop notifications. Use for "테슬라 200달러 아래면 알려줘", price monitoring, 알림 등록/감시/중지, rule JSON, or pre-trade safety checks. Also use for credit/margin trading (신용, 빚투, 담보비율, 반대매매): forced-liquidation deadlines and required deposits. Price monitoring requires a running local worker; never submit live orders or claim an alert is active from a draft alone.
 ---
 
 # Safe Trade Rule Builder
@@ -52,6 +52,35 @@ You (Codex) understand the user's sentence; the scripts do not call any external
 3. Run `python scripts/rule_builder.py --intent "<the user's original sentence>" --rule-json -` and pass the JSON on stdin (or a file path instead of `-`). Always pass the original sentence: it is checked for prompt injection, and its explicit wording ("매수 후보", "매도 후보", "알려줘") overrides your JSON.
 4. Exit code 2 means the JSON did not match the schema. Read the message, fix the JSON, and run again.
 5. Without `--rule-json`, the offline parser (`--parser deterministic`, the default) handles common patterns. Use it for quick checks or when you cannot build the JSON.
+
+## Persistent Price Alerts (Windows, local worker)
+
+Price alerts are implemented in `scripts/alert_watch.py`. Do not answer a price-alert request only by saying that monitoring is unavailable. Distinguish a **draft**, **registered rule**, **running watcher**, and **notification submitted to Windows**. No live orders are supported.
+
+1. Build the rule as above and use `rule_builder.py --save-draft <workspace>/rule-output/draft.json` to save the full JSON. Show the symbol, currency, inclusive threshold (the existing price-cross evaluator uses <= / >=), session, cooldown, quote source, and cancel conditions. A 60-second minimum polling/retry interval and 60-second minimum cooldown apply. Defaults are not user-confirmed choices.
+2. Before registering or starting continuous monitoring, obtain explicit confirmation of these values and explain that quotes come from Yahoo via yfinance (may be delayed or unavailable), not KakaoPay Securities. The local PC must be awake, connected, and the worker must stay running. A draft-only request must not start a worker.
+3. After confirmation, register with the command below. `--draft` accepts the complete rule-builder output or ParsedRule JSON; the code revalidates it and does not trust supplied ALLOW flags. `--confirm` means the user reviewed the settings. The DB path must be in the user's workspace, never in the installed plugin cache.
+
+```powershell
+python <skill>/scripts/alert_watch.py --db <workspace>/rule-output/alerts.sqlite3 add --draft <workspace>/rule-output/draft.json --intent "테슬라가 200달러 아래로 내려가면 알려줘" --confirm
+```
+
+4. Install Windows dependencies with `python -m pip install -r <plugin-root>/requirements.txt`. Run `alert_watch.py setup-notifications` once: this registers only the current user's app identifier/display name, never changes notification preferences or security policy. Use `test-notification` to submit a clearly labeled Windows test toast if the user requests a channel test. OS notification settings / Do Not Disturb may hide it; submission success does not prove the user saw it. Native delivery uses the Windows-Toasts library / Windows SDK, not PowerShell shell interpolation.
+5. Start `run --interval 60` in a dedicated local terminal that stays open. If the agent environment cannot keep a process alive after the turn, give the exact terminal command rather than claiming it is running. Never install login tasks/services or bypass sandbox restrictions. Use `run --once` only as a one-cycle check, not as continuous monitoring.
+
+```powershell
+python <skill>/scripts/alert_watch.py --db <workspace>/rule-output/alerts.sqlite3 run --interval 60
+python <skill>/scripts/alert_watch.py --db <workspace>/rule-output/alerts.sqlite3 status
+python <skill>/scripts/alert_watch.py --db <workspace>/rule-output/alerts.sqlite3 list
+python <skill>/scripts/alert_watch.py --db <workspace>/rule-output/alerts.sqlite3 events
+python <skill>/scripts/alert_watch.py --db <workspace>/rule-output/alerts.sqlite3 pause <rule-id>
+python <skill>/scripts/alert_watch.py --db <workspace>/rule-output/alerts.sqlite3 resume <rule-id>
+python <skill>/scripts/alert_watch.py --db <workspace>/rule-output/alerts.sqlite3 remove <rule-id>
+```
+
+The watcher recomputes quote age from the source timestamp (15-second freshness limit), checks symbol/currency, policy, actual session/holidays/DST, and persists cooldown and notification attempts in SQLite. Provider/notification failures are recorded rather than claimed as successful delivery. A failed notification can be attempted again with a new fresh quote after 60 seconds. Pausing/deleting takes effect for subsequent checks; an in-flight delivery may already be submitted. Restarting the worker retains cooldown; stopping it or sleeping the PC stops monitoring. A crash between Windows submission and recording success can cause a duplicate after restart; exactly-once delivery is not promised.
+
+Scope: price alerts only. Account/collateral snapshot monitoring, expiry/consecutive-day rules, news/volume/manual-review cancellation, mobile/email delivery, automatic startup, and a guaranteed real-time feed are not implemented. Unsupported conditions are rejected at registration, not silently ignored. `--provider demo-fixture` is explicitly synthetic and notifications are labeled `[DEMO]`; it must never be presented as live market data.
 
 When explaining output, mention the parser state before the safety decision:
 

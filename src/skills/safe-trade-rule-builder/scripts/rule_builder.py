@@ -84,6 +84,7 @@ def main() -> int:
         type=Path,
         help="Credit account snapshot JSON for margin (반대매매) checks.",
     )
+    parser.add_argument("--save-draft", type=Path, help="Save the full JSON draft for review and alert registration.")
     args = parser.parse_args()
     for stream in (sys.stdout, sys.stderr):
         try:
@@ -108,6 +109,8 @@ def main() -> int:
     # 담보비율 알림·반대매매 질문은 종목 룰이 아니므로 신용거래 가드로 보낸다.
     margin_intent = detect_margin_intent(args.intent)
     if margin_intent.kind in {"collateral_alert", "rule_question"}:
+        if args.save_draft:
+            parser.error("--save-draft is for price rules; account monitoring is not supported.")
         rules = load_margin_rules()
         if margin_intent.kind == "collateral_alert":
             result = build_alert_rule(
@@ -142,6 +145,9 @@ def main() -> int:
     except RuleJsonError as exc:
         print(str(exc), file=sys.stderr)
         return 2
+    if args.save_draft:
+        args.save_draft.parent.mkdir(parents=True, exist_ok=True)
+        args.save_draft.write_text(json.dumps(asdict(draft), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if args.format == "markdown":
         print(render_markdown_report(draft, locale=args.locale))
     else:

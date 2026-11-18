@@ -45,6 +45,8 @@ def render_markdown_report(draft: RuleDraft, *, locale: str = "ko") -> str:
         lines.append(f"- Parser warnings: `{', '.join(str(item) for item in parser_warnings)}`")
     if parser_notes:
         lines.append(f"- Parser notes: `{'; '.join(str(item) for item in parser_notes)}`")
+    if draft.action == "notify_only":
+        lines.append("- Alert registration: draft only; register with alert_watch.py add and start its run worker separately.")
     lines.extend(
         [
             "",
@@ -106,6 +108,8 @@ def render_korean_markdown_report(draft: RuleDraft) -> str:
         lines.append(f"- 파서 경고: `{', '.join(str(item) for item in parser_warnings)}`")
     if parser_notes:
         lines.append(f"- 파서 메모: `{'; '.join(str(item) for item in parser_notes)}`")
+    if draft.action == "notify_only":
+        lines.append("- 알림 등록: 아직 미등록. 초안 확인 후 alert_watch.py add로 등록하고 run 감시 프로세스를 시작해야 합니다.")
     lines.extend(
         [
             "",

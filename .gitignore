@@ -14,6 +14,8 @@ docs/reboot/archive/aws/backup-*/
 mhg-output/
 # margin-rule-check 점검 결과
 mrc-output/
+# Local alert registrations, account/draft outputs and notification history
+rule-output/
 # Java 시연 예제의 Gradle·javac 빌드 결과
 .gradle/
 src/skills/*/examples/*/build/
