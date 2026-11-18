@@ -19,7 +19,7 @@ from zoneinfo import ZoneInfo
 
 from builder import build_rule, safe_lookback_days
 from evaluation import evaluate_trigger
-from market_data import get_provider
+from market_data import MAX_CLOCK_SKEW_SECONDS, get_provider
 from schema import ParsedRule
 from session_window import allowed_market_states, evaluate_time_window, load_sessions, market_for_symbol
 
@@ -122,7 +122,8 @@ class AlertStore:
 
     def remove(self, rule_id: str) -> None:
         with self.db:
-            self.db.execute("DELETE FROM rules WHERE id=?", (rule_id,))
+            if not self.db.execute("DELETE FROM rules WHERE id=?", (rule_id,)).rowcount:
+                raise ValueError("Unknown rule id.")
 
     def events(self) -> list[dict[str, Any]]:
         return [dict(row) for row in self.db.execute("SELECT * FROM notifications ORDER BY id DESC LIMIT 100")]
@@ -211,7 +212,8 @@ def evaluate(rule: dict[str, Any], quote: dict[str, Any], now: int) -> dict[str,
     if quote.get("symbol") != symbol:
         return {"status": "STOP", "reason": "QUOTE_SYMBOL_MISMATCH"}
     timestamp = quote.get("timestamp")
-    if isinstance(timestamp, bool) or not isinstance(timestamp, int) or timestamp <= 0 or timestamp > now:
+    if (isinstance(timestamp, bool) or not isinstance(timestamp, int) or timestamp <= 0
+            or timestamp > now + MAX_CLOCK_SKEW_SECONDS):
         return {"status": "STOP", "reason": "INVALID_QUOTE_TIMESTAMP"}
     price = quote.get("regular_market_price")
     try:
@@ -227,7 +229,7 @@ def evaluate(rule: dict[str, Any], quote: dict[str, Any], now: int) -> dict[str,
             or (key != "move_percent" and value <= 0)
         ):
             return {"status": "STOP", "reason": "INVALID_QUOTE_FIELD", "field": key}
-    quote = {**quote, "age_seconds": now - timestamp}
+    quote = {**quote, "age_seconds": max(0, now - timestamp)}  # within the allowed clock skew counts as fresh
     result = evaluate_trigger(rule["trigger"], quote, allowed_states=allowed_market_states(rule["time_window"]))
     if result["status"] != "MATCHED":
         return result
@@ -353,8 +355,16 @@ def main() -> int:
             return 0
         store = AlertStore(args.db)
         if args.command == "add":
+            known = {row["id"]: row for row in store.rules()}
             rule_id = store.register(args.intent, json.loads(args.draft.read_text(encoding="utf-8-sig")), args.provider)
-            print(encode({"registered_rule_id": rule_id, "monitoring_started": False, "db": str(store.path)}))
+            existing = known.get(rule_id)
+            enabled = existing is None or bool(existing["enabled"])
+            print(encode({"registered_rule_id": rule_id, "already_registered": existing is not None,
+                          "enabled": enabled, "monitoring_started": False, "db": str(store.path)}))
+            if not enabled:
+                # Registering again must not silently undo an explicit pause, nor hide that it is still paused.
+                print(f"This rule was already registered and is paused; it stays paused. Run: resume {rule_id}",
+                      file=sys.stderr)
         elif args.command == "list":
             print(encode(store.rules()))
         elif args.command == "events":

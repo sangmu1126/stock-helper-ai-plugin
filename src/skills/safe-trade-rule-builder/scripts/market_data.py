@@ -5,6 +5,10 @@ from typing import Any
 
 from models import MarketDataProvider, MarketQuote
 
+# A PC clock a few seconds behind the exchange makes a just-received quote look like it is
+# from the future. Allow that much; anything further ahead is still an invalid timestamp.
+MAX_CLOCK_SKEW_SECONDS = 5
+
 
 def float_or_none(value: Any) -> float | None:
     try:
@@ -81,7 +85,7 @@ class YFinanceMarketDataProvider:
             health["errors"].append("MISSING_REGULAR_MARKET_PRICE")
         if previous_close is None:
             health["errors"].append("MISSING_PREVIOUS_CLOSE")
-        if last_ts <= 0 or last_ts > now:
+        if last_ts <= 0 or last_ts > now + MAX_CLOCK_SKEW_SECONDS:
             health["ok"] = False
             health["errors"].append("INVALID_QUOTE_TIMESTAMP")
 

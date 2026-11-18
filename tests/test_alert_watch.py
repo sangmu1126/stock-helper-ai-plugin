@@ -101,7 +101,7 @@ def test_notify_cooldown_restart_and_new_quote(store):
     ({"currency": "KRW"}, "TRIGGER_CURRENCY_MISMATCH"),
     ({"currency": None}, "MISSING_QUOTE_CURRENCY"),
     ({"timestamp": NOW - 16, "age_seconds": 0}, "STALE_QUOTE"),
-    ({"timestamp": NOW + 1}, "INVALID_QUOTE_TIMESTAMP"),
+    ({"timestamp": NOW + 6}, "INVALID_QUOTE_TIMESTAMP"),  # beyond the 5-second clock-skew allowance
     ({"timestamp": 0}, "INVALID_QUOTE_TIMESTAMP"),
     ({"timestamp": None}, "INVALID_QUOTE_TIMESTAMP"),
     ({"symbol": "AAPL"}, "QUOTE_SYMBOL_MISMATCH"),
@@ -196,6 +196,31 @@ def test_demo_notifications_are_labeled(store):
     notifier = Mock()
     run(store, notifier, quote(health={"ok": True, "demo": True}))
     assert notifier.send.call_args.args[0].startswith("[DEMO]")
+
+
+def test_pc_clock_a_few_seconds_behind_does_not_block_a_fresh_quote(store):
+    """A quote stamped 3 s after the PC clock was rejected as 'from the future' before."""
+    store.register(INTENT, draft(), "yfinance")
+    notifier = Mock()
+    assert run(store, notifier, quote(timestamp=NOW + 3))[0]["status"] == "NOTIFY_ONLY"
+    notifier.send.assert_called_once()
+
+
+@pytest.mark.parametrize("ahead,valid", [(3, True), (60, False)])
+def test_yfinance_allows_small_clock_skew_only(monkeypatch, ahead, valid):
+    import time
+
+    import market_data
+    ticker = SimpleNamespace(
+        info={"regularMarketTime": int(time.time()) + ahead, "currency": "USD", "marketState": "REGULAR"},
+        fast_info=SimpleNamespace(last_price=190, previous_close=210),
+    )
+    monkeypatch.setitem(sys.modules, "yfinance", SimpleNamespace(Ticker=lambda _: ticker))
+    monkeypatch.setattr(market_data, "_history_indicators", lambda *args, **kwargs: (None, None))
+    result = market_data.YFinanceMarketDataProvider().get_quote("TSLA")
+    assert result.health["ok"] is valid
+    assert ("INVALID_QUOTE_TIMESTAMP" in result.health["errors"]) is not valid
+    assert result.age_seconds == 0
 
 
 def test_notification_shows_quote_time_in_market_time_zone(store):
@@ -297,23 +322,36 @@ def test_cli_save_register_list_pause_and_once(tmp_path):
     assert created.returncode == 0
     assert json.loads(path.read_text(encoding="utf-8"))["action"] == "notify_only"
 
-    def cli(*args):
-        value = subprocess.run(
+    def raw(*args):
+        return subprocess.run(
             [sys.executable, "-X", "utf8", str(SCRIPTS / "alert_watch.py"), "--db", str(db), *args],
             capture_output=True, text=True, encoding="utf-8",
         )
+
+    def cli(*args):
+        value = raw(*args)
         assert value.returncode == 0, value.stderr
         return value.stdout
 
-    saved = json.loads(cli("add", "--draft", str(path), "--intent", INTENT, "--confirm"))
+    add = ("add", "--draft", str(path), "--intent", INTENT, "--confirm")
+    saved = json.loads(cli(*add))
     assert saved["monitoring_started"] is False
+    assert (saved["already_registered"], saved["enabled"]) == (False, True)
     assert json.loads(cli("status"))["monitoring_running"] is False
     assert len(json.loads(cli("list"))) == 1
     cli("pause", saved["registered_rule_id"])
     # A paused registry runs without any quote request or native notification.
     assert cli("run", "--once").splitlines()[-1] == "[]"
+    # Registering the same rule again keeps the explicit pause and says so.
+    again = raw(*add)
+    assert again.returncode == 0
+    assert json.loads(again.stdout) | {"db": None} == saved | {"already_registered": True, "enabled": False, "db": None}
+    assert "stays paused" in again.stderr and f"resume {saved['registered_rule_id']}" in again.stderr
     cli("remove", saved["registered_rule_id"])
     assert json.loads(cli("list")) == []
+    # Removing an unknown id is an error, not a silent "removed".
+    missing = raw("remove", saved["registered_rule_id"])
+    assert missing.returncode == 2 and "Unknown rule id" in missing.stderr
 
 
 def test_run_repeats_until_interrupt_and_releases_lock(monkeypatch, tmp_path):
