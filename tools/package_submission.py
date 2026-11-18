@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -16,7 +17,8 @@ REQUIRED_PATHS = [
 ]
 
 ALLOWED_LOG_SUFFIXES = {".md", ".txt", ".json", ".jsonl"}
-EXCLUDED_NAMES = {"__pycache__", ".pytest_cache"}
+# Used only without git: caches and IDE/Gradle build output that tools create inside src/.
+EXCLUDED_NAMES = {"__pycache__", ".pytest_cache", ".gradle", "build", "bin", "out", "logs"}
 
 
 def main() -> int:
@@ -39,12 +41,26 @@ def main() -> int:
     output = root / args.output
     if output.exists():
         output.unlink()
+    sources = source_files(root)
+    logs = sorted(path for path in (root / "logs").rglob("*") if path.is_file())
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        add_tree(archive, root / "src", root)
+        for path in sources:
+            archive.write(path, path.relative_to(root).as_posix())
         archive.write(root / "README.md", "README.md")
-        add_tree(archive, root / "logs", root)
-    print(f"Created {output}")
+        for path in logs:
+            archive.write(path, path.relative_to(root).as_posix())
+    print(f"Created {output}: {len(sources)} plugin files, README.md, {len(logs)} conversation logs")
     return 0
+
+
+def source_files(root: Path) -> list[Path]:
+    """Plugin files as committed in git (working-tree content), so caches and build output stay out."""
+    try:
+        listed = subprocess.run(["git", "ls-files", "-z", "--", "src"], cwd=root, capture_output=True, check=True).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return sorted(path for path in (root / "src").rglob("*")
+                      if path.is_file() and not should_exclude(path.relative_to(root)))
+    return sorted(root / name for name in listed.decode("utf-8").split("\0") if name and (root / name).is_file())
 
 
 def validate(root: Path) -> list[str]:
@@ -65,14 +81,6 @@ def validate(root: Path) -> list[str]:
         errors.append(f"Unsupported log file type: {path.relative_to(root)}")
 
     return errors
-
-
-def add_tree(archive: zipfile.ZipFile, source: Path, root: Path) -> None:
-    for path in sorted(source.rglob("*")):
-        if should_exclude(path):
-            continue
-        if path.is_file():
-            archive.write(path, path.relative_to(root).as_posix())
 
 
 def should_exclude(path: Path) -> bool:
