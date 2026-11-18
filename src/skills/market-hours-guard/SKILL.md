@@ -101,6 +101,21 @@ python scripts/mhg.py impact --repo <저장소> --calendar market_hours.toml --n
 `examples/toy-broker/`는 일부러 변경을 누락한 합성 저장소(실제 회사 코드 아님)이고, `examples/toy-broker-fixed/`는 수정 후 기대 상태다. 같은 내용의 Java판(Gradle 프로젝트)이 `examples/toy-broker-java/`, `examples/toy-broker-java-fixed/`에 있다.
 사용자가 시연을 요청하면 `examples/toy-broker`를 임시 폴더에 복사해 위 작업 순서를 그대로 수행한다(원본 예제는 수정하지 않는다).
 
+### 실제 공개 예제 (합성 입력 아님, 0.7.1)
+
+사용자가 "실제 예제", "공개 코드로 점검", "한국투자증권 실사례"를 요청하면 `scripts/public_example.py`를 사용한다. `examples/public-kis/manifest.json`에 한국투자증권 공식 저장소 커밋 `74b0a082fa67a0be5bf53f561719c853890ed2df`(2026-11-16)과 원본 14개 파일의 SHA-256을 고정했다. 네트워크를 사용하는 `--fetch`는 원본 다운로드에만 쓰며, 대상 코드를 import/실행하거나 API를 호출하지 않는다. 출력 경로는 사용자 작업 폴더 아래로 지정한다.
+
+```bash
+python <skill>/scripts/public_example.py --case hours --fetch --out <workspace>/mhg-output/public-kis
+python <skill>/scripts/public_example.py --case retired-finance --fetch --out <workspace>/mhg-output/public-kis
+```
+
+- `hours`: 기존 거래시간 점검기를 그대로 사용한다. 출처 있는 최소 기준표 `calendar.public.toml`로 **실제 예제 7개 파일의 폐지된 시간외 단일가 안내 9곳**을 검출한다. 합성 SOR 가정이나 경계 테스트는 포함하지 않는다. 현행 websocket TR 제공 시간은 확인하지 못했으므로 16~20시로 자동 치환하지 않는다.
+- `retired-finance`: 사용자가 제시한 국내 재무분석 API 7종 종료 공지와 **실제 예제의 URL·TR ID·호출문 위치**를 AST로 대조하는 한정된 실사례다. 결과는 `NOTICE_TARGET_REFERENCE` 7건이다. 일반적인 API 종료 탐지기가 아니며, 참조가 있다는 것이 호출이 실행된다거나 서버 차단·장애가 재현됐다는 뜻은 아니다. 공지 제목·게시일은 공식 포털에서 확인했지만 동적 공지 본문은 독립적으로 확보하지 못했음을 반드시 알린다.
+- 종료 코드 1은 발견 항목이 있다는 뜻이며 실행 실패가 아니다. 2는 다운로드·해시·입력 오류다. 원본을 한 번 받으면 `--fetch` 없이 오프라인으로 재현할 수 있다. 해시가 다르면 검사하지 않고 기존 파일을 보존한다.
+- 보고서에는 원본 URL·커밋·행 번호·해시·검증 한계를 남긴다. 이 자료는 카카오페이증권 내부 코드가 아니라 **증권업계의 공개 코드 적용 사례**다. PR 제출·카카오페이증권 내부 적용·운영 장애 해결과 구분한다.
+- 저장소 전체 라이선스를 확인하지 못했으므로 원본 코드를 제출 ZIP에 재배포하지 않는다. 플러그인에는 manifest·검사 코드·생성된 메타데이터 보고서만 포함한다. `mhg-output/`의 다운로드 원본은 로컬 검사 자료다.
+
 ## 범위 밖
 
 시스템 용량·성능 테스트, 거래소·SOR 제공사 장애 원인 분석, 실주문, 코드에 적힌 휴장일 목록의 정적 대조(휴장일은 경계 테스트로만 확인), DB·원격 설정 서버에 저장된 값.

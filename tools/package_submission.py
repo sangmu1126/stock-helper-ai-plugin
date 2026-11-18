@@ -54,13 +54,17 @@ def main() -> int:
 
 
 def source_files(root: Path) -> list[Path]:
-    """Plugin files as committed in git (working-tree content), so caches and build output stay out."""
+    """Include current plugin sources, including new non-ignored files, but no build/log copies."""
     try:
-        listed = subprocess.run(["git", "ls-files", "-z", "--", "src"], cwd=root, capture_output=True, check=True).stdout
+        listed = subprocess.run(
+            ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", "src"],
+            cwd=root, capture_output=True, check=True,
+        ).stdout
     except (OSError, subprocess.CalledProcessError):
         return sorted(path for path in (root / "src").rglob("*")
                       if path.is_file() and not should_exclude(path.relative_to(root)))
-    return sorted(root / name for name in listed.decode("utf-8").split("\0") if name and (root / name).is_file())
+    return sorted({root / name for name in listed.decode("utf-8").split("\0")
+                   if name and (root / name).is_file() and not should_exclude(Path(name))})
 
 
 def validate(root: Path) -> list[str]:

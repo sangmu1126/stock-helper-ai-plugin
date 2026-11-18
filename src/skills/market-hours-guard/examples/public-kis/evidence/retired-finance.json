@@ -1,0 +1,164 @@
+{
+  "schema": "public-example-audit/v1",
+  "case": "retired-finance",
+  "repository": "koreainvestment/open-trading-api",
+  "revision": "74b0a082fa67a0be5bf53f561719c853890ed2df",
+  "checked_at": "2026-11-19T01:49:58+09:00",
+  "source_executed": false,
+  "live_api_called": false,
+  "kakaopay_internal_system": false,
+  "check": "Static AST comparison of notice API names with pinned example URL/TR-ID/call sites",
+  "notice": {
+    "title": "Open API 일부 서비스(국내주식 재무분석 API 7종) 종료 안내",
+    "url": "https://apiportal.koreainvestment.com/intro",
+    "published_on": "2026-10-27",
+    "effective_at": "2026-11-11T16:00:00+09:00",
+    "verification": "Title and publication date verified on the official portal on 2026-11-19. The effective timestamp and seven names come from the notice body supplied by the user; the dynamic notice body was not independently retrieved.",
+    "live_api_called": false
+  },
+  "findings": [
+    {
+      "status": "NOTICE_TARGET_REFERENCE",
+      "name": "국내주식 대차대조표",
+      "path": "examples_llm/domestic_stock/finance_balance_sheet/finance_balance_sheet.py",
+      "line": 25,
+      "call_lines": [
+        88
+      ],
+      "endpoint": "/uapi/domestic-stock/v1/finance/balance-sheet",
+      "tr_id": "FHKST66430100",
+      "runtime_reachability": "not_verified",
+      "live_api_called": false,
+      "source_url": "https://github.com/koreainvestment/open-trading-api/blob/74b0a082fa67a0be5bf53f561719c853890ed2df/examples_llm/domestic_stock/finance_balance_sheet/finance_balance_sheet.py#L25"
+    },
+    {
+      "status": "NOTICE_TARGET_REFERENCE",
+      "name": "국내주식 손익계산서",
+      "path": "examples_llm/domestic_stock/finance_income_statement/finance_income_statement.py",
+      "line": 26,
+      "call_lines": [
+        84
+      ],
+      "endpoint": "/uapi/domestic-stock/v1/finance/income-statement",
+      "tr_id": "FHKST66430200",
+      "runtime_reachability": "not_verified",
+      "live_api_called": false,
+      "source_url": "https://github.com/koreainvestment/open-trading-api/blob/74b0a082fa67a0be5bf53f561719c853890ed2df/examples_llm/domestic_stock/finance_income_statement/finance_income_statement.py#L26"
+    },
+    {
+      "status": "NOTICE_TARGET_REFERENCE",
+      "name": "국내주식 재무비율",
+      "path": "examples_llm/domestic_stock/finance_financial_ratio/finance_financial_ratio.py",
+      "line": 26,
+      "call_lines": [
+        89
+      ],
+      "endpoint": "/uapi/domestic-stock/v1/finance/financial-ratio",
+      "tr_id": "FHKST66430300",
+      "runtime_reachability": "not_verified",
+      "live_api_called": false,
+      "source_url": "https://github.com/koreainvestment/open-trading-api/blob/74b0a082fa67a0be5bf53f561719c853890ed2df/examples_llm/domestic_stock/finance_financial_ratio/finance_financial_ratio.py#L26"
+    },
+    {
+      "status": "NOTICE_TARGET_REFERENCE",
+      "name": "국내주식 수익성비율",
+      "path": "examples_llm/domestic_stock/finance_profit_ratio/finance_profit_ratio.py",
+      "line": 28,
+      "call_lines": [
+        91
+      ],
+      "endpoint": "/uapi/domestic-stock/v1/finance/profit-ratio",
+      "tr_id": "FHKST66430400",
+      "runtime_reachability": "not_verified",
+      "live_api_called": false,
+      "source_url": "https://github.com/koreainvestment/open-trading-api/blob/74b0a082fa67a0be5bf53f561719c853890ed2df/examples_llm/domestic_stock/finance_profit_ratio/finance_profit_ratio.py#L28"
+    },
+    {
+      "status": "NOTICE_TARGET_REFERENCE",
+      "name": "국내주식 기타주요비율",
+      "path": "examples_llm/domestic_stock/finance_other_major_ratios/finance_other_major_ratios.py",
+      "line": 26,
+      "call_lines": [
+        86
+      ],
+      "endpoint": "/uapi/domestic-stock/v1/finance/other-major-ratios",
+      "tr_id": "FHKST66430500",
+      "runtime_reachability": "not_verified",
+      "live_api_called": false,
+      "source_url": "https://github.com/koreainvestment/open-trading-api/blob/74b0a082fa67a0be5bf53f561719c853890ed2df/examples_llm/domestic_stock/finance_other_major_ratios/finance_other_major_ratios.py#L26"
+    },
+    {
+      "status": "NOTICE_TARGET_REFERENCE",
+      "name": "국내주식 안정성비율",
+      "path": "examples_llm/domestic_stock/finance_stability_ratio/finance_stability_ratio.py",
+      "line": 25,
+      "call_lines": [
+        85
+      ],
+      "endpoint": "/uapi/domestic-stock/v1/finance/stability-ratio",
+      "tr_id": "FHKST66430600",
+      "runtime_reachability": "not_verified",
+      "live_api_called": false,
+      "source_url": "https://github.com/koreainvestment/open-trading-api/blob/74b0a082fa67a0be5bf53f561719c853890ed2df/examples_llm/domestic_stock/finance_stability_ratio/finance_stability_ratio.py#L25"
+    },
+    {
+      "status": "NOTICE_TARGET_REFERENCE",
+      "name": "국내주식 성장성비율",
+      "path": "examples_llm/domestic_stock/finance_growth_ratio/finance_growth_ratio.py",
+      "line": 25,
+      "call_lines": [
+        89
+      ],
+      "endpoint": "/uapi/domestic-stock/v1/finance/growth-ratio",
+      "tr_id": "FHKST66430800",
+      "runtime_reachability": "not_verified",
+      "live_api_called": false,
+      "source_url": "https://github.com/koreainvestment/open-trading-api/blob/74b0a082fa67a0be5bf53f561719c853890ed2df/examples_llm/domestic_stock/finance_growth_ratio/finance_growth_ratio.py#L25"
+    }
+  ],
+  "limitations": [
+    "Not a general API-retirement detector; this case uses an explicit seven-API mapping.",
+    "Title and publication date verified on the official portal on 2026-11-19. The effective timestamp and seven names come from the notice body supplied by the user; the dynamic notice body was not independently retrieved.",
+    "References are present; runtime use, server rejection and downstream customer impact were not tested.",
+    "No replacement API or licensed alternative data feed is assumed."
+  ],
+  "finding_count": 7,
+  "verified_sources": [
+    {
+      "path": "examples_llm/domestic_stock/finance_balance_sheet/finance_balance_sheet.py",
+      "sha256": "84967d1c48eb63965679e6ec847e2d050cf1b6ecaf8efb8714f16b4dd3fe05b7",
+      "verified": true
+    },
+    {
+      "path": "examples_llm/domestic_stock/finance_income_statement/finance_income_statement.py",
+      "sha256": "f0211cda1f387433cc3021bb1b55c66835c6027f30db380c75ffe37d3d8b2857",
+      "verified": true
+    },
+    {
+      "path": "examples_llm/domestic_stock/finance_financial_ratio/finance_financial_ratio.py",
+      "sha256": "a2420c00b2065ea124c663559153186c89af1df600ab690fe79d027269a4883b",
+      "verified": true
+    },
+    {
+      "path": "examples_llm/domestic_stock/finance_profit_ratio/finance_profit_ratio.py",
+      "sha256": "83b232c657e83ca68474e5cf60af10f135ea68645e59f18ec094702aea5de8b7",
+      "verified": true
+    },
+    {
+      "path": "examples_llm/domestic_stock/finance_other_major_ratios/finance_other_major_ratios.py",
+      "sha256": "30e683796a09a4a2e33d2d95bfe3be2a6b55f08ee8aee6eb762f459d926ac82d",
+      "verified": true
+    },
+    {
+      "path": "examples_llm/domestic_stock/finance_stability_ratio/finance_stability_ratio.py",
+      "sha256": "0004d8ed8f45112c0befa5a6608fd4a7ae8ac0fd0fa2ac933a75ebcf1d5271c2",
+      "verified": true
+    },
+    {
+      "path": "examples_llm/domestic_stock/finance_growth_ratio/finance_growth_ratio.py",
+      "sha256": "940712666e0c6e3238092f689d617307aee9be668615926d02417f3354393397",
+      "verified": true
+    }
+  ],
+  "synthetic_input": false
+}

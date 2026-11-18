@@ -1,0 +1,27 @@
+# Focused public-document check. No synthetic SOR/probe assumptions.
+[meta]
+name = "KIS public example: retired KRX single-price label"
+local_tz = "Asia/Seoul"
+basis_date = 2026-11-19
+
+[sources]
+KRX_CHANGE = "KRX regime change effective 2026-09-14; official KIS notice: https://securities.koreainvestment.com/main/customer/notice/Notice.jsp?cmd=TF04ga000002&num=47532 ; abolition report: https://www.kbmaeil.com/article/20260909500701 . These exchange hours do not establish support hours for individual KIS websocket TRs."
+
+[[boundary]]
+id = "KRX_AFTER_CLOSE"
+market = "KRX"
+time = "20:00"
+meaning = "KRX aftermarket regime close; not a claim about websocket TR availability"
+keywords = ["aftermarket", "애프터"]
+effective_from = 2026-09-14
+source = "KRX_CHANGE"
+
+[[retired]]
+id = "KRX_SINGLE_PRICE_CLOSE_UNTIL_20260913"
+market = "KRX"
+time = "18:00"
+meaning = "Retired KRX single-price label; verify each TR separately"
+keywords = ["시간외", "단일가", "시간외단일가", "single", "overtime"]
+replaced_by = "KRX_AFTER_CLOSE"
+retired_on = 2026-09-14
+source = "KRX_CHANGE"

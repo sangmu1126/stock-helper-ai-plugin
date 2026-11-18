@@ -470,7 +470,7 @@ def test_submission_structure_validation_passes() -> None:
     assert validate_submission(ROOT) == []
 
 
-def test_submission_zip_takes_committed_plugin_files_and_all_logs(tmp_path, monkeypatch) -> None:
+def test_submission_zip_takes_new_plugin_files_and_all_logs_but_not_build_output(tmp_path, monkeypatch) -> None:
     """IDE/Gradle output and stray log copies inside src/ used to be zipped with the plugin."""
     import zipfile
 
@@ -483,6 +483,10 @@ def test_submission_zip_takes_committed_plugin_files_and_all_logs(tmp_path, monk
         (tmp_path / junk).parent.mkdir(parents=True, exist_ok=True)
         (tmp_path / junk).write_text("x", encoding="utf-8")
     (tmp_path / "README.md").write_text("readme", encoding="utf-8")
+    (tmp_path / "src/skills/new-example").mkdir(parents=True)
+    (tmp_path / "src/skills/new-example/SKILL.md").write_text("new source", encoding="utf-8")
+    (tmp_path / "src/.env").write_text("NOT_A_REAL_SECRET=example", encoding="utf-8")
+    (tmp_path / ".gitignore").write_text(".env\n", encoding="utf-8")
     (tmp_path / "logs/codex").mkdir(parents=True)
     (tmp_path / "logs/codex/session.jsonl").write_text("{}", encoding="utf-8")
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
@@ -492,7 +496,8 @@ def test_submission_zip_takes_committed_plugin_files_and_all_logs(tmp_path, monk
     monkeypatch.setattr(sys, "argv", ["package_submission.py", "--output", "out.zip"])
     assert package_submission.main() == 0
     assert sorted(zipfile.ZipFile(tmp_path / "out.zip").namelist()) == [
-        "README.md", "logs/codex/session.jsonl", "src/.codex-plugin/plugin.json"]
+        "README.md", "logs/codex/session.jsonl", "src/.codex-plugin/plugin.json",
+        "src/skills/new-example/SKILL.md"]
 
 
 def test_builder_passes_trigger_lookback_to_demo_quote() -> None:

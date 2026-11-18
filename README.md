@@ -2,22 +2,26 @@
 
 [![CI](https://github.com/sangmu1126/stock-helper-ai-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/sangmu1126/stock-helper-ai-plugin/actions/workflows/ci.yml)
 
-카카오페이증권의 공개·검증 가능한 문제(반복되는 전산장애, 신용거래 반대매매 오안내)를 해결하는 Codex 플러그인입니다. 사내용 스킬 2개와 일반 투자자용 스킬 1개로 구성되며, **클라우드 계정도 외부 AI API도 없이 PC 하나에서** 동작합니다.
+카카오페이증권 관련 공개 자료에서 확인한 거래 안정성·신용거래 안내 문제를 바탕으로, **거래시간 변경 누락과 잘못된 신용 안내를 점검**하는 Codex 플러그인입니다. 사내용 스킬 2개와 일반 투자자용 스킬 1개로 구성됩니다. 별도 클라우드 배포나 외부 AI API 키 없이 로컬 Python으로 실행하며, 대화형 사용에는 Codex가 필요합니다.
+
+**회사 공식 제품이 아니며, 카카오페이증권 내부 코드·문서를 제공받거나 내부 적용 효과를 검증한 것은 아닙니다.** 공개 보도는 문제의 배경이고, 기능 검증은 합성 자료·업계 공개 코드·실제 시세 알림을 구분해 수행했습니다. 장애가 시간 하드코딩 때문에 발생했다고 주장하지 않습니다.
 
 ## 한눈에 보기
 
 | 항목 | 내용 |
 | --- | --- |
-| 형태 | Codex 플러그인(스킬 3개 + 로컬 런타임), Python 3.11+ |
+| 형태 | Codex 플러그인 **0.7.1**(스킬 3개 + 로컬 런타임), Python 3.11+. 데스크톱 알림은 Windows 10/11 |
 | 핵심 구조 | 판정은 결정적 코드가 맡고, 문장 이해·설명·코드 수정은 Codex가 맡음 |
-| 근거 | 금감원 전산장애 통계, 담보비율 오안내 보도, 회사 공식 안내·공지, 거래소 발표 ([근거 문서](src/docs/MARKET_HOURS_EVIDENCE.md), [신용 가드 근거](src/docs/MARGIN_GUARD.md)) |
-| 검증 | 자동 테스트와 ruff 린트를 GitHub Actions CI에서 실행(생성된 JUnit 테스트를 실제 JDK로 실행하는 것 포함). 합성 저장소·가상 자료로 수정 전후 재현, 공개 증권 저장소 5곳으로 오탐 평가 |
-| 외부 연결 | 없음. 시세 조회(Yahoo Finance, yfinance)만 선택 사항 |
+| 근거 | 금감원 자료를 인용한 장애·민원 보도, 회사 공식 안내·공지, 거래소 발표 ([거래시간 근거](src/docs/MARKET_HOURS_EVIDENCE.md), [신용 가드 근거](src/docs/MARGIN_GUARD.md)) |
+| 검증 | 합성 자료의 수정 전후 테스트, 공개 저장소 5곳의 정적 검사, 고정 원본 14개 파일의 해시 검증, 실제 시세의 Windows 알림 제출. CI는 pytest·ruff·JUnit 실행으로 구성 |
+| 외부 연결 | 대화형 실행은 Codex 사용. 실사례 최초 다운로드는 GitHub, 실제 시세는 Yahoo Finance(yfinance). 카카오페이증권 주문·계좌 연결 및 실주문 없음 |
+
+핵심 업무 결과물은 **위치·근거가 붙은 점검 보고서, 수정 제안 diff, 재검증 테스트**입니다. 일반 문장·JSON 초안은 Codex만으로도 만들 수 있으며, 플러그인은 반복 가능한 검사 코드와 출처 있는 규칙을 더합니다. 가격 알림은 이와 별도의 보조 기능입니다.
 
 ### 실행 기록과 외부 기여
 
-- **공개 PR:** 한국투자증권 공식 저장소에서 폐지된 시간외 단일가 안내 12곳(예제 9곳, AI 코딩 도우미용 API 명세 3곳)을 수정하는 [PR #91](https://github.com/koreainvestment/open-trading-api/pull/91)을 제출했습니다. 설명 문구만 변경했으며 해당 TR의 현행 제공 시간은 확정하지 않았습니다. PR 제출은 반영·승인을 의미하지 않습니다.
-- **실제 CLI 기록:** [실행 요약](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/summary.json), [변경 전 경계 테스트](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/mhg-before-tests.txt), [수정 예제 경계 테스트](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/mhg-after-tests.txt), [상담 문구 점검](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/mrc-lint.txt), [반대매매 가드](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/margin-guard.txt), [달러 조건 룰](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/usd-rule.txt).
+- **공개 PR:** 한국투자증권 공식 저장소에서 폐지된 시간외 단일가 안내 12곳(예제 9곳, AI 코딩 도우미용 API 명세 3곳)을 수정하는 [PR #91](https://github.com/koreainvestment/open-trading-api/pull/91)을 제출했습니다. **2026-11-19 확인 시 OPEN·미머지**입니다. 설명 문구만 변경했으며 해당 TR의 현행 제공 시간은 확정하지 않았습니다. 재무 API 7종 종료 대응과는 별개이며, 내부 적용·운영 장애 해결을 의미하지 않습니다.
+- **합성 입력의 실제 CLI 기록 (0.6.0):** [실행 요약](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/summary.json), [변경 전 경계 테스트](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/mhg-before-tests.txt), [수정 예제 경계 테스트](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/mhg-after-tests.txt), [상담 문구 점검](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/mrc-lint.txt), [반대매매 가드](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/margin-guard.txt), [달러 조건 룰](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/usd-rule.txt). 기존 합성 원본과 수정 예제를 따로 실행한 비교이며, Codex의 실시간 수정 녹화가 아닙니다.
 - **가격 알림 실사용 흐름 (0.7.0):** 빈 작업 폴더에서 [초안](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/01-draft.txt) → [조건 확인](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/02-confirm.txt) → [등록](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/03-register.txt) → [감시](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/04-watch.txt) → [알림](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/05-notify.txt) → [Ctrl+C 중지](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/06-stop.txt)까지 이어서 실행했습니다([요약](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/summary.json)). 실제로 표시된 [Windows 알림 화면](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/notification.png)도 남겼습니다.
   - **1~6단계는 합성 시세(`demo-fixture`)입니다.** 조건이 맞도록 만든 가짜 가격이며, 알림 제목에 `[DEMO]`가 붙습니다.
   - **[7단계](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/07-real-quote.txt)는 실제 시세(Yahoo Finance)입니다.** 같은 룰을 실제 시세로 한 번 평가했습니다. 카카오는 Yahoo에 애프터마켓 시세가 없어 마지막 시세가 1시간 넘게 지난 정규장 종가였고, `STALE_QUOTE`로 알리지 않았습니다. TSLA는 미국 정규장 밖이라 `WAIT`였습니다.
@@ -25,6 +29,30 @@
 - **화면 촬영:** [캡처 안내와 현재 상태](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/CAPTURE.md). 위 CLI 기록은 Codex 앱 화면 캡처나 실시간 수정 녹화가 아닙니다. 알림 화면만 실제 바탕화면을 잘라 저장했습니다.
 
 CLI 기록은 `python tools/record_demo_evidence.py`로, 가격 알림 흐름은 `python tools/record_alert_flow.py --screenshot`(KRX 정규장 또는 애프터마켓 시간에 실행)으로, 미국 실제 시세 기록은 `python tools/record_us_real_alert.py --screenshot`(미국 정규장, 한국시간 겨울 23:30~06:00·여름 22:30~05:00)으로 다시 생성할 수 있습니다. 작업·사용자 경로 접두어만 가렸고 AI 전체 대화 로그는 변경하지 않았습니다.
+
+![미국 정규장 실제 시세로 제출된 TSLA 알림](https://raw.githubusercontent.com/sangmu1126/stock-helper-ai-plugin/main/docs/media/us-real-alert/notification.png)
+
+실제 Windows 알림 화면입니다. TSLA 10,000 USD 이하라는 경로 확인용 조건으로 시험했으며 투자 전략·목표가 제안이 아닙니다. 위 증거 링크와 이미지는 공개 GitHub 자료라 인터넷 연결이 필요하고, 제출 ZIP에는 `docs/media/`나 기록 생성 도구가 포함되지 않습니다.
+
+### 실제 공개 코드로 실행하기 (0.7.1)
+
+합성 `toy-broker`와 별도로 **한국투자증권 공식 공개 원본**을 내려받아 검사하는 실행 예제를 제공합니다. 커밋 `74b0a082fa67a0be5bf53f561719c853890ed2df`(2026-11-16)과 SHA-256을 고정하며, 대상 코드는 실행하지 않습니다.
+
+```bash
+python src/skills/market-hours-guard/scripts/public_example.py --case hours --fetch
+python src/skills/market-hours-guard/scripts/public_example.py --case retired-finance --fetch
+```
+
+| 실제 입력 | 실행 결과 | 확인 범위 |
+| --- | --- | --- |
+| 시간외 시세 예제 원본 7개 파일 | 폐지된 시간외 단일가 안내 **9곳 STALE**, 같은 구간 시작값은 **9곳 UNMAPPED** | 기존 거래시간 점검기로 설명 문구 검사. UNMAPPED는 오류 확정이 아니며 현행 TR 제공 시간은 미확인 |
+| 재무분석 예제 원본 7개 파일 | 종료 공지 대상 **7종의 URL·TR ID·호출문 참조** | 명시적 7종 목록과 AST 정적 대조. 실제 API 호출·차단·장애는 검증하지 않음 |
+
+[시간외 실사례 결과](src/skills/market-hours-guard/examples/public-kis/evidence/hours.json) · [재무 API 실사례 결과](src/skills/market-hours-guard/examples/public-kis/evidence/retired-finance.json) · [원본 출처와 해시](src/skills/market-hours-guard/examples/public-kis/manifest.json).
+
+두 명령의 종료 코드 **1은 발견 항목 있음**, 2는 입력·다운로드·해시 오류입니다. 다운로드 후 `--fetch`를 빼면 오프라인으로 재현합니다. 결과와 원본은 `mhg-output/public-kis/<case>/`에 저장합니다. 원본 코드를 임의로 고치면 해시 검증에서 중단합니다.
+
+**이것은 카카오페이증권 내부 코드 검증이 아니라 증권업계 공개 코드 적용 사례입니다.** 합성 예제의 `17 실패 → 50 통과`와 다른 실험이며, 이 공개 예제에서 경계 테스트 50건을 실행했다는 뜻이 아닙니다. 재무 API 공지의 제목·게시일은 [KIS 공식 포털](https://apiportal.koreainvestment.com/intro)에서 확인했지만, 시행 시각·7종 목록은 사용자가 제공한 본문에 근거하며 동적 본문은 독립적으로 확보하지 못했습니다. 원본의 재배포 라이선스를 확인하지 못해 제출물에는 다운로드 도구·출처·검사 메타데이터만 넣고 원본 코드는 포함하지 않습니다.
 
 ## 배경
 
@@ -34,7 +62,7 @@ CLI 기록은 `python tools/record_demo_evidence.py`로, 가격 알림 흐름은
 
 | 대상 | 스킬 | 해결하는 일 | 공개 근거 |
 | --- | --- | --- | --- |
-| **사내 개발자·QA** | `market-hours-guard` | 거래시간 제도 변경(애프터마켓, SOR 적용 시간, 미국 서머타임)과 특수일(수능일)·휴장일을 코드·설정에 빠짐없이 반영했는지 점검하고 경계 시각 테스트로 확인 | MTS 장애 42건, 대형 12개사 중 공동 1위·4년 연속 증가한 유일한 회사(금감원 자료). 애프터마켓 개장 첫날 SOR 시간 변경 과정의 장애 |
+| **사내 개발자·QA** | `market-hours-guard` | 코드·설정에서 거래시간 변경 누락 후보를 찾고, 연결된 동작을 경계 테스트로 확인. 검사 대상 밖인 파일·미확정 항목은 별도로 보고 | 회사 MTS 장애 42건을 집계한 보도. 업계에서는 거래시간 확대 첫날 SOR 관련 장애 발생. 회사 장애의 내부 원인을 시간 하드코딩으로 단정하지 않음 |
 | **사내 상담 품질·QA·개발자** | `margin-rule-check` | 상담 스크립트·안내 문구·앱 설정·계산 코드의 담보비율·반대매매 일정이 공식 규칙과 맞는지 점검 | 상담 과정의 담보비율 오안내(120%로 안내, 실제 140%) 보도, 상반기 민원 829% 증가 |
 | **일반 투자자** | `safe-trade-rule-builder` | 반대매매 기한·필요 금액·한시 유예를 출처와 함께 계산하고, 매매 요청을 수동 확인이 필요한 안전한 룰 초안으로 변환. 확인한 가격 알림은 PC에서 감시해 Windows 알림으로 보냄(주문 없음) | 신용공여 1년 새 168.5% 증가, 2026-11-06 반대매매 한시 유예 공지 |
 
@@ -49,7 +77,7 @@ CLI 기록은 `python tools/record_demo_evidence.py`로, 가격 알림 흐름은
   → (가격 알림) 사용자가 확인하면 Codex가 등록까지 하고, 감시는 PC 터미널의 로컬 프로세스가 이어서 맡음
 ```
 
-별도 화면은 없고 Codex 채팅이 곧 인터페이스입니다. 가격 알림만 Windows 작업 표시줄 알림으로 옵니다. 같은 플러그인은 ChatGPT에서도 설치할 수 있습니다.
+별도 웹 화면은 없고 Codex 채팅이 인터페이스입니다. 가격 감시 결과는 Windows 알림으로 제출합니다. 아래 설치·실행 절차는 Codex CLI 기준이며, 플러그인을 지원하지 않는 IDE 확장 대화와 구분합니다.
 
 ## 설치와 실행
 
@@ -58,7 +86,7 @@ Python 3.11 이상이 필요합니다.
 ```bash
 git clone https://github.com/sangmu1126/stock-helper-ai-plugin.git
 cd stock-helper-ai-plugin
-pip install -r src/requirements.txt
+python -m pip install -r src/requirements.txt
 python -m pytest -q
 ```
 
@@ -68,12 +96,12 @@ Windows 콘솔에서 한글이 깨지면 `$env:PYTHONIOENCODING="utf-8"`을 먼�
 
 **Codex에 플러그인으로 설치하려면**
 
-1. 저장소 루트에 `.agents/plugins/marketplace.json`을 만들고 아래 내용을 넣습니다. `.agents/`는 개인 설정 폴더라 저장소에 포함하지 않습니다.
+1. 저장소 루트에 `.agents/plugins/marketplace.json`이 없으면 아래 내용으로 만듭니다. 이미 있으면 다른 플러그인 항목을 유지하고 `safe-trade-rule-builder`만 추가합니다. `.agents/`는 개인 설정이라 제출물에 포함하지 않습니다.
 
    ```json
    {
-     "name": "local",
-     "interface": { "displayName": "Local" },
+     "name": "personal",
+     "interface": { "displayName": "Personal" },
      "plugins": [
        {
          "name": "safe-trade-rule-builder",
@@ -85,12 +113,28 @@ Windows 콘솔에서 한글이 깨지면 `$env:PYTHONIOENCODING="utf-8"`을 먼�
    }
    ```
 
-2. Codex 앱을 다시 시작하거나 Codex CLI에서 `/plugins`로 설치합니다. Codex IDE 확장은 플러그인을 지원하지 않습니다.
-3. 예시 요청
-   - "SOR 적용 시간이 20:00까지 늘어난 변경과 수능일 시간 변경이 이 저장소에 반영됐는지 점검해줘."
-   - "상담 스크립트와 앱 설정에 담보비율 안내가 규칙과 다르게 적힌 곳을 찾아줘."
-   - "담보비율 120%만 맞추면 반대매매 안 되지?"
-   - "테슬라가 200달러 아래로 내려가면 알려줘. 10분에 한 번만." (확인 후 등록하고, 감시 명령을 안내합니다)
+2. 같은 폴더의 터미널에서 로컬 소스를 등록하고 설치한 뒤 새 세션을 시작합니다. 기존 마켓플레이스 이름이 `personal`이 아니면 설치 명령의 `@personal`을 해당 이름으로 바꿉니다.
+
+   ```powershell
+   codex plugin marketplace add .
+   codex plugin add safe-trade-rule-builder@personal
+   codex
+   ```
+
+3. **Codex 입력창**에서 `/plugins`로 설치 상태를 확인하고, `$market`를 입력해 자동완성의 `market-hours-guard`를 선택합니다. 아래는 실제 공개 코드 점검 요청입니다.
+
+   ```text
+   $market-hours-guard
+   public_example.py로 hours와 retired-finance 사례를 실행해줘.
+   --fetch로 공개 원본을 다운로드해도 돼.
+   결과는 현재 작업 폴더의 mhg-output/public-kis에 저장해줘.
+   커밋·해시·파일·행 번호와 검증하지 못한 범위를 보여줘.
+   원본 수정·실행이나 증권사 API 호출은 하지 마.
+   ```
+
+다른 기능은 `$margin-rule-check`로 상담 문서 점검, `$safe-trade-rule-builder`로 반대매매 계산·가격 규칙 생성을 요청합니다. 초안 생성만으로 알림이 등록되거나 감시가 시작되지는 않습니다. 가격 알림은 조건 확인 후 등록하고 별도의 감시 터미널을 유지해야 합니다.
+
+설치 후에는 **새 대화·CLI 세션**이 필요합니다. VS Code의 터미널에서 실행한 CLI는 사용할 수 있지만 **VS Code Codex 확장 대화에서는 플러그인을 지원하지 않습니다.** [공식 플러그인 안내](https://learn.chatgpt.com/docs/plugins) · [스킬 선택 문법](https://learn.chatgpt.com/docs/skills-and-plugins).
 
 ## 1. 거래시간 변경 점검기 (`market-hours-guard`, 사내 개발자·QA)
 
@@ -126,7 +170,7 @@ python -m pytest -q tests/market_hours_guard
 - 이 스킬로 투자자용 스킬과 로컬 런타임을 검사하면 거래시간 값이 모두 기준표와 일치합니다. 이 상태는 테스트로 고정돼 있습니다.
 - 가상으로 SOR 종료를 21:00으로 바꾼 기준표를 `impact`에 넣으면, 주석을 단 2곳(라우터 상수, 정산 cron)이 새로 MISMATCH가 된다고 미리 알려 주고 종료 코드 1을 냅니다.
 
-**공개 저장소 평가.** 증권사 공식 예제(한국투자, 키움)와 라이브러리·봇 등 공개 저장소 5곳에 돌렸습니다. 처음에는 769건 중 547건이 API 코드 목록(`4:10~20`), 종목코드(`"005930"`), 슬라이스(`row[9:21]`)를 시각으로 읽은 오탐이었습니다. 고친 뒤 223건 중 시각이 아닌 판정은 0건입니다. 한국투자증권 공식 예제에서는 2026-09-14에 폐지된 **시간외 단일가(16:00~18:00) 안내 9곳을 STALE로 찾았습니다.** 같은 문구가 AI 코딩 도우미용 API 명세(CSV)에도 3곳 있었지만, 점검기가 CSV를 검사하지 않아 PR 검토 중에 따로 찾았습니다. 값만 같은 MATCH(일본 장 09:00 ↔ KRX 개장), 1MB 넘는 파일과 CSV를 읽지 않는 것 같은 한계도 함께 적었습니다 ([MARKET_HOURS_REAL_REPOS.md](src/docs/MARKET_HOURS_REAL_REPOS.md)).
+**공개 저장소 평가.** 증권사 공식 예제(한국투자, 키움)와 라이브러리·봇 등 공개 저장소 5곳에 돌렸습니다. API 코드 목록(`4:10~20`), 종목코드(`"005930"`), 슬라이스(`row[9:21]`)를 시각으로 읽던 문제를 수정한 뒤 남은 223건을 한 명이 수동 분류했고, 그 표본에서 시각이 아닌 판정은 0건이었습니다. **전체 오탐률 0%라는 뜻은 아닙니다.** 값만 같고 의미가 다른 MATCH는 20건 남았으며, 전체 재현율도 측정하지 않았습니다. 한국투자 공식 예제에서는 폐지된 시간외 단일가 안내 9곳을 STALE로 찾았고, CSV 명세의 같은 안내 3곳은 점검기가 검사하지 않아 PR 검토 중 별도 검색으로 찾았습니다. 1MB 초과 파일·CSV 등 검사 한계는 [평가 문서](src/docs/MARKET_HOURS_REAL_REPOS.md)에 적었습니다.
 
 자세한 설계는 [MARKET_HOURS_GUARD.md](src/docs/MARKET_HOURS_GUARD.md)에 있습니다.
 
@@ -152,7 +196,7 @@ python src/skills/margin-rule-check/scripts/margin_rule_check.py lint --repo src
 
 ## 3. 안전 매매·반대매매 가드 (`safe-trade-rule-builder`, 일반 투자자)
 
-투자자의 매수·매도·신용 요청을 바로 주문으로 연결하지 않습니다. 반대매매 위험, 감정 표현, 세션·시간 조건, 데이터 신뢰도, 계좌 한도, 중복 실행, 수동 확인 절차를 거친 룰 초안과 설명으로 바꿉니다. 실주문은 하지 않습니다.
+투자자의 매수·매도·신용 요청을 규칙 초안과 설명으로 바꾸며 주문으로 연결하지 않습니다. 초안 생성은 형식·모호성·감정 표현·정책을 검사하고, 시세 평가·계좌 계산은 관련 데이터를 넣었을 때 수행합니다. 계좌 한도·브로커 상태·중복 실행 검사는 별도 로컬 런타임 이벤트 경로에 있습니다. 초안 출력만으로 이 모든 실시간 검사가 완료됐다고 해석하면 안 됩니다.
 
 ### 3-1. 반대매매 가드
 
@@ -160,14 +204,14 @@ python src/skills/margin-rule-check/scripts/margin_rule_check.py lint --repo src
 
 - 신용 매수 요청이면 시작 담보비율과 140%·120%까지의 하락률을 계산하고 확인 질문을 붙입니다(`REQUIRE_CLARIFICATION`).
 - 계좌 스냅샷을 넣으면 140% 회복에 필요한 입금액·상환액, 반대매매 예정일, 한시 유예 판정을 계산합니다. 날짜는 주말과 한국거래소 휴장일을 뺀 영업일로 셉니다(예: 12/30 담보부족 → 12/31 연말휴장일·1/1 신정을 건너뛰어 1/5 반대매매).
-- "담보비율 150% 아래로 내려가면 알려줘"는 알림 룰로 처리합니다.
+- "담보비율 150% 아래로 내려가면 알려줘"는 담보비율 알림 **초안**으로 처리합니다. 계좌를 자동 갱신해 계속 감시하는 기능은 없으며, 아래 가격 감시기에 등록하는 종목 가격 규칙과 다릅니다.
 
 ```bash
 python src/skills/safe-trade-rule-builder/scripts/margin_check.py assess --account src/skills/safe-trade-rule-builder/examples/margin/misguided_after_deposit.json
 python src/skills/safe-trade-rule-builder/scripts/rule_builder.py --intent "담보비율 120%만 맞추면 반대매매 안 되지?" --format markdown
 ```
 
-오안내 사례를 본뜬 가상 계좌에서 7,600만 원을 입금해 127.2%가 돼도, 그날 120% 미만이었다면 당일 140% 회복 의무가 남아 **다음 날 반대매매 대상**입니다. 이 기능은 추가로 6,400만 원 입금 또는 4,571만 원 상환이 필요하다고 안내합니다.
+오안내 유형을 본뜬 **가상 계좌**에서는 7,600만 원을 입금해 127.2%가 돼도, 그날 120% 미만이었다면 당일 140% 회복 의무가 남아 다음 영업일 반대매매 대상으로 계산됩니다. 예제 계산 결과는 추가 입금 64,000,000원 또는 상환 45,714,286원입니다. 공식 안내에 없는 계산식에는 업계 일반식 가정을 쓰며 이자·수수료와 시세 변동을 제외합니다. 실제 계좌의 비율·일정은 증권사 앱 표시를 우선합니다.
 
 ### 3-2. 안전 매매 룰
 
@@ -189,8 +233,8 @@ python src/skills/safe-trade-rule-builder/scripts/rule_builder.py --intent "카�
 
 > **알려진 한계: 국내(KRX) 종목은 실제 시세로 알림이 사실상 발송되지 않습니다.**
 > - 감시는 15초보다 오래된 시세로는 알리지 않습니다. Yahoo의 KRX 시세는 20분 지연("Delayed Quote")이고 애프터마켓 시세는 없습니다. 그래서 국내 종목을 `yfinance` 공급자로 등록하면 가격 조건이 맞아도 `STALE_QUOTE`로 멈춥니다. 이 경우 `alert_watch.py add`가 등록 결과에 `KRX_QUOTES_DELAYED` 경고를 붙이고 삭제 명령을 안내합니다.
-> - 미국 종목은 정규장 중에 알림이 나갑니다. 2026-11-18 미국 정규장에 잰 시세 나이는 0~2초였고, 실제 시세 TSLA 알림이 Windows에 제출됐습니다([기록](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/us-real-alert/alert.txt)). Yahoo는 이 시세에도 "15분 지연" 값을 붙이지만, 출처는 "Nasdaq Real Time Price"로 표시되고 실측도 실시간이었습니다. 5분간 측정한 값이므로 Yahoo의 제공 방식이 바뀌면 달라질 수 있습니다.
-> - 미국 정규장 밖(장 전·장 후)에는 시세 시각이 마지막 정규장 종가에 머물러 알리지 않습니다.
+> - 2026-11-18 미국 정규장의 TSLA·AAPL·NVDA 표본에서는 제공 시각과 조회 시각 차이가 0~2초였고, TSLA 시험 알림이 Windows에 제출됐습니다([기록](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/us-real-alert/alert.txt)). 제공자 메타데이터에는 `exchangeDataDelayedBy=15`와 `quoteSourceName=Nasdaq Real Time Price`가 함께 있었습니다. **5분간의 타임스탬프 표본이지 모든 종목·시점의 실시간성이나 거래소 대비 지연을 보증하는 측정은 아닙니다.**
+> - 미국 정규장 밖에는 현재 감시기가 세션 검사에서 대기합니다. 확장시간 시세를 받더라도 장 전·장 후 알림을 지원하는 것으로 간주하지 않습니다.
 > - 지연된 가격으로 "떨어졌다"고 알리면 이미 움직인 시장을 보고 판단하게 되므로 15초 기준은 완화하지 않았습니다. 국내 종목을 실제 시세로 알리려면 실시간 시세 공급자 연결이 필요합니다.
 
 1. 아래 명령으로 초안을 저장하고 종목·통화·가격·세션·쿨다운을 확인합니다. 예시는 TSLA 200 USD 이하, 미국 정규장, 10분 쿨다운입니다. `price_cross_below`는 기존 평가기의 포함 비교(`<=`)를 사용하며, 엄격한 미만 비교가 아닙니다.
@@ -228,7 +272,7 @@ python "$scripts/alert_watch.py" remove <rule-id>
 
 만료·연속일 조건, 뉴스·거래량·수동 검토 취소 조건은 자동으로 처리할 수 없어 등록 시 거절합니다. 계좌 자동 갱신·담보비율 지속 감시, 휴대폰 푸시·이메일, 로그인 시 자동 시작은 제공하지 않습니다. 발송 실패는 기록하고 새 시세에서 최소 60초 후 재시도합니다. OS 제출 직후 프로세스가 종료되면 기록 시점 차이로 재시작 후 중복이 생길 수 있어 정확히 한 번 전달을 보장하지 않습니다. 일시정지·삭제 전 이미 진행 중인 알림은 제출될 수 있습니다.
 
-네이티브 알림은 Windows SDK 바인딩을 제공하는 [Windows-Toasts](https://windows-toasts.readthedocs.io/en/latest/)를 사용합니다. 초안·계좌·등록 DB·알림 이력은 `rule-output/` 아래 로컬 파일이므로 제출물이나 공개 저장소에 포함하지 마세요. 기존 0.6.0 설치본은 새 소스를 반영하도록 플러그인을 재설치하고 새 세션을 시작해야 합니다.
+네이티브 알림은 Windows SDK 바인딩을 제공하는 [Windows-Toasts](https://windows-toasts.readthedocs.io/en/latest/)를 사용합니다. 초안·계좌·등록 DB·알림 이력은 `rule-output/` 아래 로컬 파일이므로 제출물이나 공개 저장소에 포함하지 마세요. 이전 설치본은 새 소스를 반영하도록 플러그인을 다시 설치하고 새 세션을 시작해야 합니다.
 
 ### 3-4. 로컬 런타임
 
@@ -247,12 +291,14 @@ python "$scripts/alert_watch.py" remove <rule-id>
 - **판정은 코드, 이해는 Codex.** 숫자와 규칙 판정을 AI에 맡기지 않습니다. Codex는 문장 이해, 룰 JSON 작성, 결과 설명, 코드 수정을 맡습니다.
 - **외부 AI API 없음.** Codex 자체가 언어 모델이라, 스크립트 안에서 다시 AI API를 부르는 것은 중복 비용이자 실패 지점이었습니다. 그래서 제거했습니다.
 - **클라우드 없음.** 처음에는 AWS Lambda·DynamoDB로 배포했지만 플러그인 흐름에서 쓰이지 않았고 심사자·사용자가 실행해 볼 수도 없었습니다. 로컬 저장소로 같은 기능(중복 차단, 쿨다운, 감사 로그)을 유지하고 AWS 리소스는 백업 후 삭제했습니다.
-- **모든 기준값에 출처.** 거래시간, 휴장일, 140%·120%, 한시 유예, 수능일 일정은 출처 ID가 붙은 설정 파일에만 있고, 출처 없는 규칙은 로드 단계에서 거부합니다.
+- **공개 규칙과 제품 가정을 구분.** 거래시간 기준표와 신용 규칙 파일은 출처 ID를 사용합니다. 합성 기준표의 `DEMO`, 담보 계산의 업계 일반식 등은 회사 공식 규칙이 아닌 가정으로 표시합니다. 출처가 있다는 것과 공식 자료로 모든 값이 검증됐다는 것은 다릅니다.
 - **같은 기준 공유.** 런타임 세션 설정과 거래시간 기준표, 투자자용 반대매매 계산과 사내용 규칙 점검이 같은 값을 쓰는지 테스트가 지킵니다.
 - **확인 못 하면 통과 안 함.** 공지되지 않은 세션, 휴장일 달력 범위 밖 날짜, 통화가 다른 가격 조건, 단일 시세로 확인할 수 없는 조건, 저장소·설정 오류는 모두 `WAIT`나 `STOP`으로 처리합니다.
 - **감시는 로컬 프로세스, 오래된 시세로는 알리지 않음.** Codex는 대화가 진행되는 동안만 동작하고, 웹에서 읽은 가격은 몇 초 전 값인지 확인할 수 없습니다. 그래서 Codex를 시세 공급원으로 쓰지 않고 등록까지만 맡깁니다. 감시는 PC의 로컬 프로세스가 맡아 시세 원래 시각으로 나이를 다시 계산하고, 15초보다 오래된 시세로는 알리지 않습니다. 이미 움직인 가격으로 판단하게 하지 않으려는 것이며, 그 대가로 Yahoo가 20분 늦게 주는 국내 종목은 알림이 나가지 않는 한계를 받아들였습니다.
 
 ## 검증
+
+2026-11-19 로컬 점검: **368개 통과, JUnit 환경이 필요한 4개 건너뜀**. `ruff check src tests tools`, README의 로컬 링크·공개 증거 경로 및 실사례 파일의 제출 포함 여부 검사도 통과했습니다. 이 결과는 현재 작업 트리 기준이며 공개 저장소 CI의 새 커밋 통과를 의미하지 않습니다.
 
 ```bash
 python -m pytest -q
@@ -262,6 +308,28 @@ ruff check src tests tools
 - 테스트는 파이썬 경로 설정 없이 실행합니다. CI(GitHub Actions)에서 린트와 함께 실행합니다.
 - 그중 4개는 생성된 JUnit 테스트를 실제로 컴파일·실행합니다. JDK와 JUnit 콘솔 런처(`JUNIT_CONSOLE_JAR`)가 없으면 로컬에서는 건너뛰고, CI에서는 실패로 처리합니다.
 - 플러그인 소스에 클라우드 SDK나 외부 AI API SDK가 없다는 것도 테스트로 확인합니다.
+
+CI 배지는 공개 저장소의 커밋 상태를 보여주며 아직 커밋·푸시하지 않은 로컬 변경의 검증 결과를 대신하지 않습니다. 과거 실행 기록의 버전·커밋은 각 `summary.json`을 기준으로 읽어야 합니다.
+
+## 제출 ZIP
+
+저장소 루트에서 아래 명령으로 구조를 확인하고 패키징합니다. 이 도구는 개발 저장소용이며 제출 ZIP 자체에는 `tools/`, `tests/`, 루트 `docs/`가 들어 있지 않습니다.
+
+```bash
+python tools/package_submission.py --check-only
+python tools/package_submission.py --output submission.zip
+```
+
+```text
+submission.zip
+├── src/        # 전체 플러그인 루트, 실사례 manifest·검사 결과 포함
+├── README.md
+└── logs/       # 전체 AI 대화 원본(md/txt/json/jsonl)
+```
+
+패키징은 Git 추적 파일과 무시되지 않은 새 `src/` 파일을 포함하되 캐시·빌드 산출물·`src/` 내부의 로그 복사본은 제외합니다. 루트 `logs/`는 추적 여부와 무관하게 전체를 포함하며 편집하지 않습니다. 제출 전 모든 사용 도구의 대화가 빠짐없이 수집됐는지 직접 확인해야 하며, 구조 검사만으로 로그의 완전성·비밀정보 부재가 증명되지는 않습니다. 인증정보·실제 고객 계좌·다운로드 원본·로컬 알림 DB는 제출하지 않습니다.
+
+ZIP으로 시작할 때도 압축을 푼 폴더가 작업 루트입니다. 위 설치 절차의 `./src`를 그대로 사용하고, 실사례 실행은 `src/skills/market-hours-guard/scripts/public_example.py`로 할 수 있습니다. 테스트·기록 재생성 도구가 필요하면 전체 Git 저장소를 사용합니다.
 
 ## 프로젝트 구조
 
@@ -288,11 +356,11 @@ tools/
 
 ## 한계
 
-- 사내용 스킬은 합성 저장소, 가상 자료, 공개 저장소 5곳으로 검증했습니다. 실제 회사 저장소·문서에서의 효과는 측정하지 않았습니다.
+- 사내용 스킬은 합성 자료와 증권업계 공개 코드로 검증했습니다. 카카오페이증권 내부 코드·문서의 결함을 발견했거나 실제 장애·민원을 줄였다는 실증 결과는 없습니다. 공개 보도만으로 내부 원인을 시간 로직 오류로 단정할 수 없습니다.
 - 거래시간 점검기의 MATCH는 "기준표에 있는 값"이라는 뜻입니다. 공개 저장소에서는 값만 같은 MATCH가 있었습니다(97건 중 37건, 수능일 기준을 고친 뒤 80건 중 20건). 그래서 고칠 대상은 문맥을 확인해 주석으로 의미를 고정합니다.
 - 담보비율 계산식은 공식 안내에 없어 업계 일반식을 쓰며, 출력에 "앱 표시값 우선"을 표시합니다.
 - 휴장일 달력은 거래소가 공지한 2027년 말까지만 들어 있습니다. 그 뒤 날짜는 세션 판정에서 `WAIT`로 두고 반대매매 날짜 계산에는 경고를 붙이므로, 매년 공지를 받아 갱신해야 합니다. 특수일은 공지가 확인된 날만 넣습니다.
-- 카카오페이증권 공개 주문·계좌 API가 없어 시세는 yfinance(선택)나 데모 시세를 쓰고, 계좌 정보는 사용자가 입력합니다.
+- 카카오페이증권 주문·계좌 API에는 연결하지 않았습니다. 시세는 yfinance 또는 합성 공급자를 쓰고, 계좌 정보는 사용자가 제공한 스냅샷으로만 계산합니다.
 - 가격 알림은 PC에서 감시 프로세스를 켜 둔 동안만 동작합니다. 자동 시작, 휴대폰 푸시, 계좌 담보비율 상시 감시는 없습니다.
 - 국내(KRX) 종목은 Yahoo 시세가 20분 지연이라 실제 시세로는 알림이 사실상 나가지 않습니다. 미국 종목은 정규장 중에만 알립니다([3-3](#3-3-로컬-가격-감시와-windows-알림-070) 참고).
 
@@ -315,3 +383,4 @@ tools/
   - 확인한 알림 전용 룰을 로컬 SQLite에 등록하고, 로컬 감시 프로세스가 60초마다 평가해 Windows 알림으로 보냅니다(일시정지·재개·삭제, 쿨다운, 이력 보존, 주문 없음).
   - 빈 작업 폴더에서 초안부터 Ctrl+C 중지까지 실행해 기록했고, 미국 정규장 실제 시세(시세 나이 0~2초)로 실제 알림이 나가는 것을 확인했습니다.
   - 국내 종목은 Yahoo 시세 지연으로 알림이 나가지 않는 한계를 명시하고, 그런 룰을 등록하면 CLI가 경고합니다.
+- **2026-11-19 (0.7.1 실제 공개 예제):** 한국투자증권 공개 원본 14개를 고정 커밋·SHA-256으로 검증해 시간외 안내 9곳과 재무 API 7종의 참조를 재현했습니다. 합성 테스트와 분리했고 실제 API 호출·차단 검증, 내부 시스템 적용은 수행하지 않았습니다.

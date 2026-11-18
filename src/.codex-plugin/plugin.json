@@ -1,6 +1,6 @@
 {
   "name": "safe-trade-rule-builder",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Local safe-trading plugin (no cloud deployment or external AI API). In-house: market-hours-guard checks trading-hours changes; margin-rule-check verifies collateral guidance against source-backed rules. Investors: computes forced-liquidation deadlines and required deposits, builds validated rule drafts, and registers persistent local price alerts with a running Windows notification worker. Quotes use the optional Yahoo/yfinance provider; no live orders.",
   "author": {
     "name": "AX Hackathon Team"

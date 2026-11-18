@@ -2,9 +2,9 @@
 
 ## 현재 상태
 
-기록에 사용한 플러그인 소스 버전은 `demo-evidence/summary.json`에 있습니다. 작업 중 소스가 0.5.0에서 0.6.0으로 갱신된 것도 기록에 반영했습니다. 실제 앱에 해당 버전이 설치·로드됐는지는 이번 작업에서 화면으로 확인하지 못했습니다.
+2026-11-19 기준 소스·CLI 설치 버전은 `0.7.1`입니다. `demo-evidence/`는 0.6.0, `alert-flow/`와 `us-real-alert/`는 0.7.0의 당시 실행 기록이며, 각 `summary.json`의 버전·커밋을 기준으로 읽습니다. 설치된 0.7.1의 공개 예제 실행은 CLI로 확인했지만 Codex 앱의 대화 화면을 촬영한 증거와는 구분합니다.
 
-Computer Use의 node_repl 초기화와 커널 초기화 후 재시도에서 모두 `failed to write kernel assets: 지정된 경로를 찾을 수 없습니다. (os error 3)`가 발생했습니다. 다른 화면 제어 경로도 같은 오류로 실패했습니다. 따라서 이번 작업에서 PNG·GIF를 촬영하지 않았으며, 화면이나 대화처럼 꾸민 이미지를 대신 만들지 않았습니다.
+초기 0.6.0 기록 작업에서는 Computer Use 초기화가 `failed to write kernel assets`로 실패해 PNG·GIF를 촬영하지 못했습니다. 2026-11-19 재시도도 `trusted Node process exited unexpectedly`로 종료됐습니다. 아래 0.7.0의 실제 Windows 알림 PNG는 별도 기록 도구로 확보한 자료이며, "모든 스크린샷이 없다"는 뜻은 아닙니다. 꾸며 만든 대화 화면은 사용하지 않습니다.
 
 `demo-evidence/`에는 실제 CLI 실행 기록을 남겼습니다. 이것은 앱 설치·스킬 자동 선택·실시간 코드 수정이 촬영됐다는 증거가 아닙니다. 전후 테스트는 기존 합성 원본과 수정 예제를 각각 임시 폴더로 복사해 실행한 비교입니다.
 
@@ -29,6 +29,9 @@ Computer Use의 node_repl 초기화와 커널 초기화 후 재시도에서 모�
 | 2 | `src/skills/margin-rule-check/examples/support-docs 상담 스크립트와 설정을 신용 규칙과 대조해줘.` | 고칠 것 5건과 수정 제안 | `mrc-lint.png` |
 | 3 | `src/skills/safe-trade-rule-builder/examples/margin/misguided_after_deposit.json을 점검해줘. 120%를 넘겼으니 반대매매를 피할 수 있나?` | 127.2% 계좌의 오해 교정, 기한, 필요한 금액, 가정 | `margin-guard.png` |
 | 4 | `카카오가 애프터마켓에서 전일 종가보다 3% 떨어지면 알려줘. 10분에 한 번만. 시연이니 demo-fixture 시세로 등록하고 감시를 시작해줘.` (KRX 16:00~20:00에 실행) | 초안 확인 → 확인 후 등록 → `run` 터미널 → `[DEMO]` Windows 알림 → Ctrl+C 중지와 `status` | `alert-flow.gif` |
+| 5 | `$market-hours-guard`를 선택하고 `public_example.py로 hours와 retired-finance를 --fetch로 실행해줘. 해시·위치·한계를 보고하고 원본은 실행·수정하지 마.` | 실제 원본 14개 해시, STALE 9·UNMAPPED 9, API 참조 7종. 합성 경계 테스트 결과와 분리 | `public-kis.png` |
+
+4번은 평소 거래일 시각 예시입니다. 수능일 등 특수일에는 `market_sessions.json`의 세션 시각에 맞춰 실행하며, 알림이 나가지 않았는데 표시됐다고 기록하지 않습니다. 공개 예제의 7종 API 참조 대조도 서버 차단 시험으로 소개하지 않습니다.
 
 저장 위치는 `docs/media/`입니다. PNG/GIF가 실제로 존재하고 내용 검토가 끝난 뒤에만 README에 이미지 링크를 추가합니다. 현재 README에는 없는 이미지 링크를 넣지 않았습니다.
 

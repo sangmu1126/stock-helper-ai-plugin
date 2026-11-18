@@ -100,3 +100,18 @@ python src/skills/market-hours-guard/scripts/mhg.py scan --repo /tmp/kis \
 ```
 
 저장소가 계속 바뀌므로 결과는 위 커밋 기준이다.
+
+## 7. 원본과 해시를 고정한 실행 예제 (2026-11-19)
+
+평가 설명만 남기지 않고 `market-hours-guard/scripts/public_example.py`로 직접 재현할 수 있게 했다. 원본은 공식 저장소의 같은 커밋에서 가져오며 파일별 SHA-256은 [manifest](../skills/market-hours-guard/examples/public-kis/manifest.json)에 있다. 실제 원본은 제출 ZIP에 재배포하지 않고 사용자가 `--fetch`로 내려받아 읽기 전용 분석한다.
+
+```bash
+python src/skills/market-hours-guard/scripts/public_example.py --case hours --fetch
+python src/skills/market-hours-guard/scripts/public_example.py --case retired-finance --fetch
+```
+
+첫 사례는 7개 파일에서 STALE 9곳을 재현한다. 데모 기준표의 SOR 가정 대신 출처가 붙은 최소 기준표 `calendar.public.toml`을 사용하며, TR 지원 시간을 추측해서 바꾸지 않는다. [실행 결과](../skills/market-hours-guard/examples/public-kis/evidence/hours.json)는 재현 당시 커밋을 대상으로 한 과거 스냅샷 검사이지 최신 main 전체 검사나 서비스 동작 테스트가 아니다.
+
+두 번째는 별도의 **공지 대상 API 참조 대조** 사례다. [공식 포털](https://apiportal.koreainvestment.com/intro)에 2026-10-27 게시된 재무분석 API 7종 종료 공지와 사용자가 제공한 본문을 기준으로, 실제 공개 Python 예제 7개에 URL·TR ID·`_url_fetch` 호출문이 남아 있음을 AST로 확인했다([실행 결과](../skills/market-hours-guard/examples/public-kis/evidence/retired-finance.json)). 공지 본문의 시행 시각·목록은 독립적으로 내려받아 검증하지 못했다. API를 호출하지 않았으므로 서버 차단·고객 피해·런타임 도달성·대체 가능성은 입증하지 않는다. 이 검사는 특정 목록에 대한 실사례 도구이지 일반적인 API 종료 탐지 기능으로 소개하지 않는다.
+
+두 사례 모두 한국투자증권의 공개 예제에 대한 검사이며 카카오페이증권 내부 시스템을 점검하거나 장애를 해결했다는 증거가 아니다. 합성 예제의 경계 테스트 50건과도 별개다.

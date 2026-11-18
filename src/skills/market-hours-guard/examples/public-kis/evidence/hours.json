@@ -1,0 +1,140 @@
+{
+  "schema": "public-example-audit/v1",
+  "case": "hours",
+  "repository": "koreainvestment/open-trading-api",
+  "revision": "74b0a082fa67a0be5bf53f561719c853890ed2df",
+  "checked_at": "2026-11-19T01:49:55+09:00",
+  "source_executed": false,
+  "live_api_called": false,
+  "kakaopay_internal_system": false,
+  "check": "Existing market-hours-guard scanner; retired exchange-label check only",
+  "calendar_digest": "sha256:e00cb8157050de55",
+  "all_scan_counts": {
+    "MISMATCH": 0,
+    "STALE": 9,
+    "DST_RISK": 0,
+    "AMBIGUOUS": 0,
+    "UNMAPPED": 9,
+    "MATCH": 0,
+    "IGNORED": 0
+  },
+  "scanned_files": 7,
+  "findings": [
+    {
+      "status": "STALE",
+      "path": "examples_llm/domestic_stock/overtime_asking_price_krx/chk_overtime_asking_price_krx.py",
+      "line": 101,
+      "found": "18:00",
+      "rule": "KRX_SINGLE_PRICE_CLOSE_UNTIL_20260913",
+      "source_url": "https://github.com/koreainvestment/open-trading-api/blob/74b0a082fa67a0be5bf53f561719c853890ed2df/examples_llm/domestic_stock/overtime_asking_price_krx/chk_overtime_asking_price_krx.py#L101"
+    },
+    {
+      "status": "STALE",
+      "path": "examples_llm/domestic_stock/overtime_asking_price_krx/overtime_asking_price_krx.py",
+      "line": 27,
+      "found": "18:00",
+      "rule": "KRX_SINGLE_PRICE_CLOSE_UNTIL_20260913",
+      "source_url": "https://github.com/koreainvestment/open-trading-api/blob/74b0a082fa67a0be5bf53f561719c853890ed2df/examples_llm/domestic_stock/overtime_asking_price_krx/overtime_asking_price_krx.py#L27"
+    },
+    {
+      "status": "STALE",
+      "path": "examples_llm/domestic_stock/overtime_ccnl_krx/chk_overtime_ccnl_krx.py",
+      "line": 84,
+      "found": "18:00",
+      "rule": "KRX_SINGLE_PRICE_CLOSE_UNTIL_20260913",
+      "source_url": "https://github.com/koreainvestment/open-trading-api/blob/74b0a082fa67a0be5bf53f561719c853890ed2df/examples_llm/domestic_stock/overtime_ccnl_krx/chk_overtime_ccnl_krx.py#L84"
+    },
+    {
+      "status": "STALE",
+      "path": "examples_llm/domestic_stock/overtime_ccnl_krx/overtime_ccnl_krx.py",
+      "line": 26,
+      "found": "18:00",
+      "rule": "KRX_SINGLE_PRICE_CLOSE_UNTIL_20260913",
+      "source_url": "https://github.com/koreainvestment/open-trading-api/blob/74b0a082fa67a0be5bf53f561719c853890ed2df/examples_llm/domestic_stock/overtime_ccnl_krx/overtime_ccnl_krx.py#L26"
+    },
+    {
+      "status": "STALE",
+      "path": "examples_llm/domestic_stock/overtime_exp_ccnl_krx/chk_overtime_exp_ccnl_krx.py",
+      "line": 84,
+      "found": "18:00",
+      "rule": "KRX_SINGLE_PRICE_CLOSE_UNTIL_20260913",
+      "source_url": "https://github.com/koreainvestment/open-trading-api/blob/74b0a082fa67a0be5bf53f561719c853890ed2df/examples_llm/domestic_stock/overtime_exp_ccnl_krx/chk_overtime_exp_ccnl_krx.py#L84"
+    },
+    {
+      "status": "STALE",
+      "path": "examples_llm/domestic_stock/overtime_exp_ccnl_krx/overtime_exp_ccnl_krx.py",
+      "line": 26,
+      "found": "18:00",
+      "rule": "KRX_SINGLE_PRICE_CLOSE_UNTIL_20260913",
+      "source_url": "https://github.com/koreainvestment/open-trading-api/blob/74b0a082fa67a0be5bf53f561719c853890ed2df/examples_llm/domestic_stock/overtime_exp_ccnl_krx/overtime_exp_ccnl_krx.py#L26"
+    },
+    {
+      "status": "STALE",
+      "path": "examples_user/domestic_stock/domestic_stock_functions_ws.py",
+      "line": 1670,
+      "found": "18:00",
+      "rule": "KRX_SINGLE_PRICE_CLOSE_UNTIL_20260913",
+      "source_url": "https://github.com/koreainvestment/open-trading-api/blob/74b0a082fa67a0be5bf53f561719c853890ed2df/examples_user/domestic_stock/domestic_stock_functions_ws.py#L1670"
+    },
+    {
+      "status": "STALE",
+      "path": "examples_user/domestic_stock/domestic_stock_functions_ws.py",
+      "line": 1771,
+      "found": "18:00",
+      "rule": "KRX_SINGLE_PRICE_CLOSE_UNTIL_20260913",
+      "source_url": "https://github.com/koreainvestment/open-trading-api/blob/74b0a082fa67a0be5bf53f561719c853890ed2df/examples_user/domestic_stock/domestic_stock_functions_ws.py#L1771"
+    },
+    {
+      "status": "STALE",
+      "path": "examples_user/domestic_stock/domestic_stock_functions_ws.py",
+      "line": 1866,
+      "found": "18:00",
+      "rule": "KRX_SINGLE_PRICE_CLOSE_UNTIL_20260913",
+      "source_url": "https://github.com/koreainvestment/open-trading-api/blob/74b0a082fa67a0be5bf53f561719c853890ed2df/examples_user/domestic_stock/domestic_stock_functions_ws.py#L1866"
+    }
+  ],
+  "limitations": [
+    "A documentation finding is not proof of a broker execution defect.",
+    "Current support and data hours of each websocket TR are unverified.",
+    "No broker code, credentials, orders, or generated boundary tests are executed."
+  ],
+  "finding_count": 9,
+  "verified_sources": [
+    {
+      "path": "examples_llm/domestic_stock/overtime_asking_price_krx/overtime_asking_price_krx.py",
+      "sha256": "5f666218729c344b1ada3e20aab550c210a7eba3279744bee712e08af56926e4",
+      "verified": true
+    },
+    {
+      "path": "examples_llm/domestic_stock/overtime_asking_price_krx/chk_overtime_asking_price_krx.py",
+      "sha256": "2705f22595ee4bc269bcec5ebe579588a0f219880e316ec5adb38ce67dc2041c",
+      "verified": true
+    },
+    {
+      "path": "examples_llm/domestic_stock/overtime_ccnl_krx/overtime_ccnl_krx.py",
+      "sha256": "6cd9109086bba49b1109aa771df08b0d57c7f41d237f12a774e07f44b17512b4",
+      "verified": true
+    },
+    {
+      "path": "examples_llm/domestic_stock/overtime_ccnl_krx/chk_overtime_ccnl_krx.py",
+      "sha256": "50a07afecf9a1af2b71a3feacd5f61eb5945f7e80603654ecf5d5d748799c3bb",
+      "verified": true
+    },
+    {
+      "path": "examples_llm/domestic_stock/overtime_exp_ccnl_krx/overtime_exp_ccnl_krx.py",
+      "sha256": "b5b9ef26c1c90a6b6ea9f18ee3e43354da63b66d41fd276a300d19d8eb4eeced",
+      "verified": true
+    },
+    {
+      "path": "examples_llm/domestic_stock/overtime_exp_ccnl_krx/chk_overtime_exp_ccnl_krx.py",
+      "sha256": "0600a517de0528ed9ad4bd72f181f48b1bf1bc49cfe6581d9616496d2845fe39",
+      "verified": true
+    },
+    {
+      "path": "examples_user/domestic_stock/domestic_stock_functions_ws.py",
+      "sha256": "fea4f2203d164fc8481b58654a2ee43bfb58ccbf20cd31203d96c31e2185ded3",
+      "verified": true
+    }
+  ],
+  "synthetic_input": false
+}
