@@ -16,7 +16,7 @@
 
 ### 실행 기록과 외부 기여
 
-- **공개 PR:** 한국투자증권 공식 예제의 폐지된 시간외 단일가 안내 9곳을 수정하는 [PR #91](https://github.com/koreainvestment/open-trading-api/pull/91)을 제출했습니다. 설명 문구만 변경했으며 해당 TR의 현행 제공 시간은 확정하지 않았습니다. PR 제출은 반영·승인을 의미하지 않습니다.
+- **공개 PR:** 한국투자증권 공식 저장소에서 폐지된 시간외 단일가 안내 12곳(예제 9곳, AI 코딩 도우미용 API 명세 3곳)을 수정하는 [PR #91](https://github.com/koreainvestment/open-trading-api/pull/91)을 제출했습니다. 설명 문구만 변경했으며 해당 TR의 현행 제공 시간은 확정하지 않았습니다. PR 제출은 반영·승인을 의미하지 않습니다.
 - **실제 CLI 기록:** [실행 요약](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/summary.json), [변경 전 경계 테스트](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/mhg-before-tests.txt), [수정 예제 경계 테스트](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/mhg-after-tests.txt), [상담 문구 점검](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/mrc-lint.txt), [반대매매 가드](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/margin-guard.txt), [달러 조건 룰](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/demo-evidence/usd-rule.txt).
 - **가격 알림 실사용 흐름 (0.7.0):** 빈 작업 폴더에서 [초안](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/01-draft.txt) → [조건 확인](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/02-confirm.txt) → [등록](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/03-register.txt) → [감시](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/04-watch.txt) → [알림](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/05-notify.txt) → [Ctrl+C 중지](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/06-stop.txt)까지 이어서 실행했습니다([요약](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/summary.json)). 실제로 표시된 [Windows 알림 화면](https://github.com/sangmu1126/stock-helper-ai-plugin/blob/main/docs/media/alert-flow/notification.png)도 남겼습니다.
   - **1~6단계는 합성 시세(`demo-fixture`)입니다.** 조건이 맞도록 만든 가짜 가격이며, 알림 제목에 `[DEMO]`가 붙습니다.
@@ -126,7 +126,7 @@ python -m pytest -q tests/market_hours_guard
 - 이 스킬로 투자자용 스킬과 로컬 런타임을 검사하면 거래시간 값이 모두 기준표와 일치합니다. 이 상태는 테스트로 고정돼 있습니다.
 - 가상으로 SOR 종료를 21:00으로 바꾼 기준표를 `impact`에 넣으면, 주석을 단 2곳(라우터 상수, 정산 cron)이 새로 MISMATCH가 된다고 미리 알려 주고 종료 코드 1을 냅니다.
 
-**공개 저장소 평가.** 증권사 공식 예제(한국투자, 키움)와 라이브러리·봇 등 공개 저장소 5곳에 돌렸습니다. 처음에는 769건 중 547건이 API 코드 목록(`4:10~20`), 종목코드(`"005930"`), 슬라이스(`row[9:21]`)를 시각으로 읽은 오탐이었습니다. 고친 뒤 223건 중 시각이 아닌 판정은 0건입니다. 한국투자증권 공식 예제에서는 2026-09-14에 폐지된 **시간외 단일가(16:00~18:00) 안내 9곳을 STALE로 찾았습니다.** 값만 같은 MATCH(일본 장 09:00 ↔ KRX 개장)와 1MB 넘는 파일 같은 한계도 함께 적었습니다 ([MARKET_HOURS_REAL_REPOS.md](src/docs/MARKET_HOURS_REAL_REPOS.md)).
+**공개 저장소 평가.** 증권사 공식 예제(한국투자, 키움)와 라이브러리·봇 등 공개 저장소 5곳에 돌렸습니다. 처음에는 769건 중 547건이 API 코드 목록(`4:10~20`), 종목코드(`"005930"`), 슬라이스(`row[9:21]`)를 시각으로 읽은 오탐이었습니다. 고친 뒤 223건 중 시각이 아닌 판정은 0건입니다. 한국투자증권 공식 예제에서는 2026-09-14에 폐지된 **시간외 단일가(16:00~18:00) 안내 9곳을 STALE로 찾았습니다.** 같은 문구가 AI 코딩 도우미용 API 명세(CSV)에도 3곳 있었지만, 점검기가 CSV를 검사하지 않아 PR 검토 중에 따로 찾았습니다. 값만 같은 MATCH(일본 장 09:00 ↔ KRX 개장), 1MB 넘는 파일과 CSV를 읽지 않는 것 같은 한계도 함께 적었습니다 ([MARKET_HOURS_REAL_REPOS.md](src/docs/MARKET_HOURS_REAL_REPOS.md)).
 
 자세한 설계는 [MARKET_HOURS_GUARD.md](src/docs/MARKET_HOURS_GUARD.md)에 있습니다.
 
